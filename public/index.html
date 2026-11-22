@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Classic Notebook Bingo</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="notebook-page">
+    <!-- Header -->
+    <header class="game-header">
+      <div class="header-title-group">
+        <h1>Bingo Notebook</h1>
+        <span id="room-display" class="room-badge">Room: match-1</span>
+      </div>
+      <div class="header-actions">
+        <button id="mute-btn" class="icon-btn" aria-label="Toggle Sound">
+          <span id="mute-icon">🔊</span> Sound
+        </button>
+        <button id="reconnect-btn" class="icon-btn" aria-label="Refresh State">
+          <span>🔄</span> Sync
+        </button>
+      </div>
+    </header>
+
+    <!-- Turn Banner -->
+    <section id="turn-banner" class="turn-banner waiting" aria-live="polite">
+      Waiting for game to start...
+    </section>
+
+    <!-- BINGO Words Panel -->
+    <section class="bingo-words-panel" aria-label="Bingo Word Progress">
+      <!-- Opponent BINGO Progress -->
+      <div class="bingo-word-row opponent-row">
+        <span class="bingo-label" id="opponent-name-label">Opponent</span>
+        <div class="bingo-letters" id="opponent-bingo-word">
+          <div class="bingo-letter" data-letter="B">B<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="I">I<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="N">N<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="G">G<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="O">O<span class="letter-strike-line"></span></div>
+        </div>
+      </div>
+
+      <!-- Player BINGO Progress -->
+      <div class="bingo-word-row">
+        <span class="bingo-label" id="player-name-label">You</span>
+        <div class="bingo-letters" id="player-bingo-word">
+          <div class="bingo-letter" data-letter="B">B<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="I">I<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="N">N<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="G">G<span class="letter-strike-line"></span></div>
+          <div class="bingo-letter" data-letter="O">O<span class="letter-strike-line"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Central BINGO Claim Button -->
+    <section class="center-action-hub">
+      <button 
+        id="bingo-claim-btn" 
+        class="bingo-claim-btn locked" 
+        disabled 
+        aria-label="Claim Bingo Victory"
+      >
+        <span id="bingo-btn-text">BINGO (0/5)</span>
+      </button>
+    </section>
+
+    <!-- 5x5 Board with SVG Line Strike Overlay -->
+    <section class="board-container" id="board-container" aria-label="Bingo Grid">
+      <div class="grid-board" id="grid-board" role="grid">
+        <!-- 25 Cells generated dynamically -->
+      </div>
+      <!-- Continuous Slanted Line Strike Overlay (pointer-events: none) -->
+      <svg 
+        id="line-strike-overlay" 
+        class="line-strike-overlay" 
+        viewBox="-30 -30 560 560" 
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+      >
+        <!-- Gradients and Lines appended dynamically -->
+      </svg>
+    </section>
+
+    <!-- Setup / Arrangement Panel (visible during setup) -->
+    <section id="setup-panel" class="setup-panel">
+      <p id="setup-status">Prepare your 5x5 numbers (1-25) or auto-shuffle:</p>
+      <div class="setup-btn-group">
+        <button id="shuffle-btn" class="btn-secondary">Random Shuffle</button>
+        <button id="lock-arrangement-btn" class="btn-primary">Lock & Ready</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Screen reader live notifications -->
+  <div id="aria-live-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Toast notifications -->
+  <div id="toast-container" class="toast-container" aria-live="assertive"></div>
+
+  <!-- Game Client Scripts -->
+  <script type="module" src="/js/gameClient.js"></script>
+</body>
+</html>
