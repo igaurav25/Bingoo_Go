@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#1B1B5E"/>
+  <rect x="64" y="64" width="384" height="384" rx="48" fill="#F6F8FF"/>
+  <line x1="64" y1="160" x2="448" y2="160" stroke="#CBD5F5" stroke-width="4"/>
+  <line x1="64" y1="256" x2="448" y2="256" stroke="#CBD5F5" stroke-width="4"/>
+  <line x1="64" y1="352" x2="448" y2="352" stroke="#CBD5F5" stroke-width="4"/>
+  <text x="256" y="310" font-family="'Kalam', cursive, sans-serif" font-size="200" font-weight="bold" fill="#1D2459" text-anchor="middle">B</text>
+  <line x1="120" y1="370" x2="392" y2="190" stroke="#E0243F" stroke-width="22" stroke-linecap="round"/>
+</svg>

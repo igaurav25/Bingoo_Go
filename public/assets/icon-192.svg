@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="40" fill="#1B1B5E"/>
+  <rect x="24" y="24" width="144" height="144" rx="20" fill="#F6F8FF"/>
+  <!-- Ruled notebook lines -->
+  <line x1="24" y1="60" x2="168" y2="60" stroke="#CBD5F5" stroke-width="2"/>
+  <line x1="24" y1="96" x2="168" y2="96" stroke="#CBD5F5" stroke-width="2"/>
+  <line x1="24" y1="132" x2="168" y2="132" stroke="#CBD5F5" stroke-width="2"/>
+  <!-- B Letter in Kalam font style -->
+  <text x="96" y="116" font-family="'Kalam', cursive, sans-serif" font-size="76" font-weight="bold" fill="#1D2459" text-anchor="middle">B</text>
+  <!-- Red pen slanted cut across letter -->
+  <line x1="45" y1="140" x2="147" y2="70" stroke="#E0243F" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -1,25 +1,27 @@
 /**
  * server/server.js
  * 
- * Production HTTP & WebSocket game server for Bingo.
+ * Part 2 Authoritative Realtime Bingo Server.
  * Supports:
- * 1. 1v1 Online Matches with continuous cutting lines & authoritative claim
- * 2. Private Rooms with unique codes & waiting lobbies
- * 3. Knockout & League Tournaments with bracket/fixtures progression
- * 4. Authoritative Coin & Virtual Economy rewards
- * 5. Intelligent AI Bot players
+ * - Single-page app routing: / and /r/:code
+ * - Redirects for legacy query parameters (?match=... / ?room=...)
+ * - Cold-start health check: /health
+ * - Anonymous session tokens (no accounts, seat ownership, zero opponent leakage)
+ * - 5-character vowel-free room codes (2-9, consonants except L)
+ * - Disconnect grace period (60s pause, forfeit on timeout)
+ * - Tab conflict resolution (newest tab wins)
+ * - Turn timer with server-authoritative deadlines & auto-pick on timeout
+ * - Rematch support with alternating first turns
  */
 
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
-import { Match } from './gameState.js';
+import { deviceRooms, normalizeRoomCode } from './roomManager.js';
 import { economy } from './economy.js';
-import { roomManager } from './roomManager.js';
-import { tournamentManager } from './tournamentManager.js';
-import { BingoBot } from './botPlayer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,8 +30,8 @@ const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const SHARED_DIR = path.join(ROOT_DIR, 'shared');
 
 const PORT = process.env.PORT || 3000;
+const MAX_MESSAGE_SIZE = 16 * 1024; // 16 KB
 
-// Content types for static file serving
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -39,23 +41,54 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav'
+  '.webmanifest': 'application/manifest+json'
 };
 
 // HTTP Server
 const server = http.createServer((req, res) => {
-  let reqPath = decodeURI(req.url.split('?')[0]);
-  if (reqPath === '/') reqPath = '/index.html';
+  const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = decodeURI(urlObj.pathname);
 
-  let filePath = '';
-  if (reqPath.startsWith('/shared/')) {
-    filePath = path.join(ROOT_DIR, reqPath);
-  } else {
-    filePath = path.join(PUBLIC_DIR, reqPath);
+  // 1. Health check for cold starts
+  if (pathname === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      uptime: process.uptime(),
+      roomsCount: deviceRooms.rooms.size,
+      timestamp: Date.now()
+    }));
+    return;
   }
 
-  // Security check: prevent directory traversal
+  // 2. Legacy URL redirect: ?match=XYZ or ?room=XYZ -> /r/:code
+  const legacyMatch = urlObj.searchParams.get('match') || urlObj.searchParams.get('room');
+  if (legacyMatch && pathname === '/') {
+    const cleanCode = normalizeRoomCode(legacyMatch) || 'B4K8M';
+    res.writeHead(302, { Location: `/r/${cleanCode}` });
+    res.end();
+    return;
+  }
+
+  // 3. Single App, One URL Routing: / and /r/:code serve index.html
+  if (pathname === '/' || pathname.startsWith('/r/')) {
+    const indexPath = path.join(PUBLIC_DIR, 'index.html');
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache'
+    });
+    fs.createReadStream(indexPath).pipe(res);
+    return;
+  }
+
+  // 4. Static asset delivery
+  let filePath = '';
+  if (pathname.startsWith('/shared/')) {
+    filePath = path.join(ROOT_DIR, pathname);
+  } else {
+    filePath = path.join(PUBLIC_DIR, pathname);
+  }
+
   if (!filePath.startsWith(ROOT_DIR)) {
     res.writeHead(403);
     res.end('Forbidden');
@@ -64,8 +97,10 @@ const server = http.createServer((req, res) => {
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('404 Not Found');
+      // Fallback for SPA routing
+      const fallbackIndex = path.join(PUBLIC_DIR, 'index.html');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      fs.createReadStream(fallbackIndex).pipe(res);
       return;
     }
 
@@ -74,112 +109,112 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache'
+      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
     });
     fs.createReadStream(filePath).pipe(res);
   });
 });
 
 // WebSocket Server
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: MAX_MESSAGE_SIZE });
 
 /**
- * Global match store: matchId -> Match
- * @type {Map<string, Match>}
+ * Socket client tracking: ws -> { roomCode, playerId, sessionToken, lastReactionAt }
  */
-export const matches = new Map();
+const socketClients = new Map();
 
-/**
- * Active bots per match: matchId -> BingoBot
- * @type {Map<string, BingoBot>}
- */
-export const matchBots = new Map();
-
-/**
- * Socket client store: socket -> { matchId, playerId, playerName }
- * @type {Map<WebSocket, { matchId: string, playerId: string, playerName: string }>}
- */
-const clients = new Map();
-
-function send(ws, type, payload) {
+function send(ws, type, payload = {}) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type, ...payload }));
   }
 }
 
-function findClientSocket(matchId, playerId) {
-  for (const [ws, info] of clients.entries()) {
-    if (info.matchId === matchId && info.playerId === playerId) {
-      return ws;
-    }
-  }
-  return null;
-}
-
-function broadcastToMatch(matchId, type, payload) {
-  for (const [ws, info] of clients.entries()) {
-    if (info.matchId === matchId) {
-      send(ws, type, payload);
+function broadcastToRoom(room, type, payload = {}, excludePlayerId = null) {
+  if (!room) return;
+  for (const player of room.players) {
+    if (player.id !== excludePlayerId && player.ws && player.ws.readyState === WebSocket.OPEN) {
+      send(player.ws, type, payload);
     }
   }
 }
 
 /**
- * Triggers a bot turn if the current turn belongs to an active bot.
- * @param {string} matchId
- * @param {Match} match
+ * Dispatches room state update to all connected players in room.
+ * @param {DeviceRoom} room
  */
-function checkBotTurn(matchId, match) {
-  if (match.status !== 'IN_PROGRESS') return;
-  const currentTurnId = match.currentTurnPlayerId;
-  const bot = matchBots.get(matchId);
+function syncRoomState(room) {
+  if (!room) return;
+  for (const player of room.players) {
+    if (player.ws && player.ws.readyState === WebSocket.OPEN) {
+      send(player.ws, 'room_state', {
+        room: room.getSnapshot(player.id)
+      });
+    }
+  }
+}
 
-  if (bot && bot.botId === currentTurnId) {
+/**
+ * Checks and schedules bot turn if applicable.
+ * @param {DeviceRoom} room
+ */
+function handleBotTurnIfNeeded(room) {
+  if (!room || !room.match || room.status !== 'playing' || room.disconnectedPlayerId) return;
+
+  const currentTurnId = room.match.currentTurnPlayerId;
+  const botPlayer = room.players.find(p => p.id === currentTurnId && p.isBot);
+
+  if (botPlayer && botPlayer.botInstance) {
     setTimeout(async () => {
-      if (match.status !== 'IN_PROGRESS' || match.currentTurnPlayerId !== bot.botId) return;
+      if (room.status !== 'playing' || room.match.currentTurnPlayerId !== botPlayer.id) return;
 
-      await match.enqueue(() => {
+      await room.match.enqueue(() => {
         // Check if bot can claim BINGO
-        const botPlayer = match.players[bot.botId];
-        if (botPlayer && botPlayer.completedLines.length >= 5) {
-          const verdict = match.claimBingo(bot.botId, `claim-bot-${Date.now()}`);
+        const botData = room.match.players[botPlayer.id];
+        if (botData && botData.completedLines.length >= 5) {
+          const verdict = room.match.claimBingo(botPlayer.id, `claim-bot-${Date.now()}`);
           if (verdict.valid) {
-            broadcastToMatch(matchId, 'bingo_result', verdict);
+            handleVictory(room, verdict);
             return;
           }
         }
 
-        // Choose number and call
-        const num = bot.chooseNumber(match.calledNumbers);
-        const callRes = match.callNumber(bot.botId, num);
+        // Pick smart uncalled number
+        const number = botPlayer.botInstance.chooseNumber(room.match.calledNumbers);
+        const callRes = room.match.callNumber(botPlayer.id, number);
+
         if (callRes.success) {
-          broadcastToMatch(matchId, 'number_called', {
+          broadcastToRoom(room, 'number_called', {
             number: callRes.number,
             turnPlayerId: callRes.turnPlayerId,
             nextTurnPlayerId: callRes.nextTurnPlayerId,
-            calledNumbers: match.calledNumbers
+            calledNumbers: room.match.calledNumbers,
+            isAutoPicked: false
           });
 
+          // Dispatch lines_completed
           for (const evt of callRes.events) {
-            const targetWs = findClientSocket(matchId, evt.recipientId);
-            if (targetWs) {
-              send(targetWs, evt.event, evt.payload);
+            const p = room.findPlayerById(evt.recipientId);
+            if (p && p.ws) {
+              send(p.ws, evt.event, evt.payload);
             }
           }
 
-          // If bot reached 5 lines with this call, claim immediately
-          if (match.players[bot.botId].completedLines.length >= 5) {
+          // Restart turn timer if configured
+          room._startTurnTimerIfNeeded();
+          syncRoomState(room);
+
+          // If bot reached 5 lines, claim
+          if (room.match.players[botPlayer.id].completedLines.length >= 5) {
             setTimeout(async () => {
-              if (match.status === 'IN_PROGRESS') {
-                const verdict = match.claimBingo(bot.botId, `claim-bot-${Date.now()}`);
+              if (room.status === 'playing') {
+                const verdict = room.match.claimBingo(botPlayer.id, `claim-bot-${Date.now()}`);
                 if (verdict.valid) {
-                  broadcastToMatch(matchId, 'bingo_result', verdict);
+                  handleVictory(room, verdict);
                 }
               }
-            }, 600);
+            }, 500);
           } else {
-            // Next turn might be bot again or human
-            checkBotTurn(matchId, match);
+            handleBotTurnIfNeeded(room);
           }
         }
       });
@@ -187,322 +222,413 @@ function checkBotTurn(matchId, match) {
   }
 }
 
-wss.on('connection', (ws) => {
+/**
+ * Handles match victory and awards series points/coins.
+ * @param {DeviceRoom} room
+ * @param {object} verdict
+ */
+function handleVictory(room, verdict) {
+  room.status = 'finished';
+  room._clearTurnTimer();
+
+  if (verdict.valid && verdict.winnerId) {
+    room.scores[verdict.winnerId] = (room.scores[verdict.winnerId] || 0) + 1;
+
+    // Award virtual coins to winner if not bot
+    if (!verdict.winnerId.startsWith('bot-')) {
+      const winner = room.findPlayerById(verdict.winnerId);
+      const opponent = room.players.find(p => p.id !== verdict.winnerId);
+      if (winner) {
+        economy.awardMatchWin(verdict.winnerId, 150, opponent?.name || 'Opponent');
+      }
+    }
+  }
+
+  broadcastToRoom(room, 'bingo_result', {
+    claimId: verdict.claimId,
+    valid: verdict.valid,
+    winnerId: verdict.winnerId,
+    reason: verdict.reason,
+    scores: room.scores
+  });
+
+  syncRoomState(room);
+}
+
+wss.on('connection', (ws, req) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
   ws.on('message', async (data) => {
     try {
-      const message = JSON.parse(data.toString());
-      const { type, matchId, playerId, payload = {} } = message;
-
-      if (!type) return;
+      const msg = JSON.parse(data.toString());
+      const { type, payload = {} } = msg;
 
       switch (type) {
-        // --- Wallet & Economy ---
-        case 'get_wallet': {
-          const wallet = economy.getWallet(playerId);
-          send(ws, 'wallet_update', { wallet });
+        case 'ping': {
+          send(ws, 'pong', { time: Date.now() });
           break;
         }
 
-        // --- Private Rooms ---
-        case 'create_private_room': {
-          const room = roomManager.createRoom(playerId, payload.playerName || 'Player');
-          clients.set(ws, { matchId: `room-${room.code}`, playerId, playerName: payload.playerName });
-          send(ws, 'private_room_created', { room: room.getLobbySnapshot() });
+        // --- Room Creation & Joining ---
+        case 'create_room': {
+          // Rate limit creation
+          if (!deviceRooms.checkRateLimit(ip, 'create', 15, 60 * 1000)) {
+            send(ws, 'error', { message: 'Too many room creations. Please wait a moment.' });
+            return;
+          }
+
+          const hostPlayerId = payload.playerId || `p-${crypto.randomBytes(3).toString('hex')}`;
+          const hostSessionToken = payload.sessionToken || crypto.randomBytes(16).toString('hex');
+          const hostName = payload.name || 'Player 1';
+          const hostAvatar = payload.avatar || '🦊';
+
+          const room = deviceRooms.createRoom(hostPlayerId, hostSessionToken, hostName, hostAvatar);
+          const hostPlayer = room.players[0];
+          hostPlayer.ws = ws;
+
+          socketClients.set(ws, {
+            roomCode: room.code,
+            playerId: hostPlayerId,
+            sessionToken: hostSessionToken,
+            lastReactionAt: 0
+          });
+
+          send(ws, 'room_created', {
+            code: room.code,
+            playerId: hostPlayerId,
+            sessionToken: hostSessionToken,
+            room: room.getSnapshot(hostPlayerId)
+          });
           break;
         }
 
-        case 'join_private_room': {
-          const room = roomManager.getRoom(payload.roomCode);
+        case 'join_room': {
+          const rawCode = payload.code || '';
+          const code = normalizeRoomCode(rawCode);
+          const room = deviceRooms.getRoom(code);
+
           if (!room) {
-            send(ws, 'error', { message: 'Room code not found' });
-            return;
-          }
-          const res = room.addPlayer(playerId, payload.playerName || 'Player');
-          if (!res.success) {
-            send(ws, 'error', { message: res.error });
-            return;
-          }
-          clients.set(ws, { matchId: `room-${room.code}`, playerId, playerName: payload.playerName });
-          // Broadcast updated lobby to all clients in this room
-          broadcastToMatch(`room-${room.code}`, 'private_room_updated', { room: res.room });
-          break;
-        }
-
-        case 'add_room_bot': {
-          const room = roomManager.getRoom(payload.roomCode);
-          if (room && room.hostId === playerId) {
-            const res = room.addBot();
-            broadcastToMatch(`room-${room.code}`, 'private_room_updated', { room: res.room });
-          }
-          break;
-        }
-
-        case 'start_private_match': {
-          const room = roomManager.getRoom(payload.roomCode);
-          if (!room || room.hostId !== playerId) {
-            send(ws, 'error', { message: 'Only room host can start the match' });
-            return;
-          }
-          const res = room.startMatch();
-          if (!res.success) {
-            send(ws, 'error', { message: res.error });
-            return;
-          }
-          matches.set(res.matchId, res.match);
-          if (room.bot) {
-            matchBots.set(res.matchId, room.bot);
-          }
-
-          broadcastToMatch(`room-${room.code}`, 'private_match_started', {
-            matchId: res.matchId,
-            roomCode: room.code
-          });
-          break;
-        }
-
-        // --- Tournaments ---
-        case 'create_tournament': {
-          const { tournamentType, tournamentName, playerName } = payload;
-          const tourn = tournamentManager.createTournament(
-            tournamentType || 'KNOCKOUT',
-            tournamentName || 'Grand Bingo Arena',
-            playerId,
-            playerName || 'Host'
-          );
-          send(ws, 'tournament_created', { tournament: tourn.getSnapshot() });
-          break;
-        }
-
-        case 'join_tournament': {
-          const tourn = tournamentManager.getTournament(payload.tournamentId);
-          if (tourn) {
-            tourn.addParticipant(playerId, payload.playerName || 'Player');
-            send(ws, 'tournament_updated', { tournament: tourn.getSnapshot() });
-          }
-          break;
-        }
-
-        case 'start_tournament': {
-          const tourn = tournamentManager.getTournament(payload.tournamentId);
-          if (tourn) {
-            const snapshot = tourn.startTournament();
-            send(ws, 'tournament_updated', { tournament: snapshot });
-          }
-          break;
-        }
-
-        case 'list_tournaments': {
-          send(ws, 'tournament_list', { tournaments: tournamentManager.listTournaments() });
-          break;
-        }
-
-        // --- Core Match Gameplay ---
-        case 'join_match': {
-          const playerName = payload.playerName || `Player ${playerId}`;
-          clients.set(ws, { matchId, playerId, playerName });
-
-          let match = matches.get(matchId);
-          if (!match) {
-            match = new Match(matchId, playerId, 'pending_opponent');
-            matches.set(matchId, match);
-          } else if (match.players['pending_opponent']) {
-            delete match.players['pending_opponent'];
-            match.players[playerId] = match._createPlayerRecord(playerId, playerName);
-            match.playerIds = [match.playerIds[0], playerId];
-            match.currentTurnPlayerId = match.playerIds[0];
-          }
-
-          // Send current state snapshot to joining player
-          const snapshot = match.getSnapshot(playerId);
-          send(ws, 'state_snapshot', { snapshot });
-
-          // Send wallet balance
-          const wallet = economy.getWallet(playerId);
-          send(ws, 'wallet_update', { wallet });
-
-          broadcastToMatch(matchId, 'player_joined', {
-            matchId,
-            playerId,
-            playerName,
-            players: match.playerIds.map(id => ({
-              id,
-              name: match.players[id]?.name || id,
-              isLocked: match.players[id]?.isLocked || false
-            }))
-          });
-          break;
-        }
-
-        case 'set_arrangement': {
-          const match = matches.get(matchId);
-          if (!match) {
-            send(ws, 'error', { message: 'Match not found' });
-            return;
-          }
-
-          await match.enqueue(() => {
-            const { grid } = payload;
-            const res = match.setPlayerArrangement(playerId, grid);
-            if (!res.success) {
-              send(ws, 'error', { message: res.error });
-              return;
-            }
-
-            send(ws, 'arrangement_locked', {
-              playerId,
-              grid: match.players[playerId].grid
+            send(ws, 'error', {
+              code: 'ROOM_NOT_FOUND',
+              message: 'Room not found. Check the code and try again.'
             });
-
-            if (res.matchStarted) {
-              broadcastToMatch(matchId, 'match_started', {
-                matchId,
-                currentTurnPlayerId: match.currentTurnPlayerId,
-                status: match.status
-              });
-              checkBotTurn(matchId, match);
-            } else {
-              broadcastToMatch(matchId, 'player_ready', { playerId });
-            }
-          });
-          break;
-        }
-
-        case 'auto_arrangement': {
-          const match = matches.get(matchId);
-          if (!match) {
-            send(ws, 'error', { message: 'Match not found' });
             return;
           }
 
-          await match.enqueue(() => {
-            const res = match.autoRandomArrangement(playerId);
-            if (!res.success) {
-              send(ws, 'error', { message: res.error });
-              return;
-            }
+          const playerId = payload.playerId || `p-${crypto.randomBytes(3).toString('hex')}`;
+          const sessionToken = payload.sessionToken || crypto.randomBytes(16).toString('hex');
+          const name = payload.name || 'Guest';
+          const avatar = payload.avatar || '🐻';
 
-            send(ws, 'arrangement_locked', {
-              playerId,
-              grid: res.grid
+          const joinResult = room.join(playerId, sessionToken, name, avatar, ws);
+          if (!joinResult.success) {
+            send(ws, 'error', {
+              code: 'ROOM_FULL',
+              message: joinResult.error || 'Unable to join room.'
             });
+            return;
+          }
 
-            if (res.matchStarted) {
-              broadcastToMatch(matchId, 'match_started', {
-                matchId,
-                currentTurnPlayerId: match.currentTurnPlayerId,
-                status: match.status
-              });
-              checkBotTurn(matchId, match);
-            } else {
-              broadcastToMatch(matchId, 'player_ready', { playerId });
-            }
+          // Tab conflict resolution: if this sessionToken was already connected on another socket, kick old socket
+          if (joinResult.isReconnect && joinResult.oldWs && joinResult.oldWs !== ws) {
+            send(joinResult.oldWs, 'tab_conflict', {
+              message: 'Opened in another tab. This session is now inactive.'
+            });
+            try { joinResult.oldWs.close(); } catch {}
+          }
+
+          socketClients.set(ws, {
+            roomCode: room.code,
+            playerId: joinResult.player.id,
+            sessionToken: joinResult.player.sessionToken,
+            lastReactionAt: 0
           });
+
+          send(ws, 'room_joined', {
+            code: room.code,
+            playerId: joinResult.player.id,
+            sessionToken: joinResult.player.sessionToken,
+            isReconnect: joinResult.isReconnect,
+            room: room.getSnapshot(joinResult.player.id)
+          });
+
+          // Broadcast presence
+          if (joinResult.wasPaused) {
+            broadcastToRoom(room, 'player_reconnected', {
+              playerId: joinResult.player.id,
+              name: joinResult.player.name
+            });
+          } else {
+            broadcastToRoom(room, 'player_joined', {
+              playerId: joinResult.player.id,
+              name: joinResult.player.name,
+              avatar: joinResult.player.avatar
+            }, joinResult.player.id);
+          }
+
+          syncRoomState(room);
+          handleBotTurnIfNeeded(room);
+          break;
+        }
+
+        case 'add_bot': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (room && room.hostPlayerId === client.playerId) {
+            const botRes = room.addBot();
+            if (botRes.success) {
+              syncRoomState(room);
+            } else {
+              send(ws, 'error', { message: botRes.error });
+            }
+          }
+          break;
+        }
+
+        case 'set_ready': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (!room) return;
+
+          const { allReady } = room.setReady(client.playerId, payload.ready);
+          syncRoomState(room);
+
+          // If both players are ready in lobby, host or server can start arranging!
+          if (allReady && room.status === 'lobby') {
+            room.startArranging();
+            broadcastToRoom(room, 'start_arranging', {
+              startingPlayerId: room.lastStartingPlayerId
+            });
+            syncRoomState(room);
+          }
+          break;
+        }
+
+        case 'start_arranging': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (room && room.hostPlayerId === client.playerId && room.status === 'lobby') {
+            room.startArranging();
+            broadcastToRoom(room, 'start_arranging', {
+              startingPlayerId: room.lastStartingPlayerId
+            });
+            syncRoomState(room);
+          }
+          break;
+        }
+
+        case 'lock_board': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (!room || room.status !== 'arranging') return;
+
+          const lockRes = room.lockBoard(client.playerId, payload.grid);
+          if (!lockRes.success) {
+            send(ws, 'error', { message: lockRes.error });
+            return;
+          }
+
+          send(ws, 'board_locked', { playerId: client.playerId });
+
+          if (lockRes.matchStarted) {
+            broadcastToRoom(room, 'match_started', {
+              currentTurnPlayerId: lockRes.currentTurnPlayerId,
+              turnDeadline: room.turnDeadline
+            });
+            handleBotTurnIfNeeded(room);
+          }
+
+          syncRoomState(room);
           break;
         }
 
         case 'call_number': {
-          const match = matches.get(matchId);
-          if (!match) {
-            send(ws, 'error', { message: 'Match not found' });
-            return;
-          }
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (!room || !room.match || room.status !== 'playing') return;
 
-          await match.enqueue(() => {
+          await room.match.enqueue(() => {
             const num = Number(payload.number);
-            const callRes = match.callNumber(playerId, num);
+            const callRes = room.match.callNumber(client.playerId, num);
             if (!callRes.success) {
               send(ws, 'error', { message: callRes.error });
               return;
             }
 
-            broadcastToMatch(matchId, 'number_called', {
+            // Restart turn timer
+            room._startTurnTimerIfNeeded();
+
+            // Broadcast called number
+            broadcastToRoom(room, 'number_called', {
               number: callRes.number,
               turnPlayerId: callRes.turnPlayerId,
               nextTurnPlayerId: callRes.nextTurnPlayerId,
-              calledNumbers: match.calledNumbers
+              calledNumbers: room.match.calledNumbers,
+              turnDeadline: room.turnDeadline,
+              isAutoPicked: false
             });
 
+            // Dispatch lines completed events
             for (const evt of callRes.events) {
-              const targetWs = findClientSocket(matchId, evt.recipientId);
-              if (targetWs) {
-                send(targetWs, evt.event, evt.payload);
+              const p = room.findPlayerById(evt.recipientId);
+              if (p && p.ws) {
+                send(p.ws, evt.event, evt.payload);
               }
             }
 
-            // Trigger bot turn if next turn is bot
-            checkBotTurn(matchId, match);
+            syncRoomState(room);
+            handleBotTurnIfNeeded(room);
           });
           break;
         }
 
         case 'claim_bingo': {
-          const match = matches.get(matchId);
-          if (!match) {
-            send(ws, 'error', { message: 'Match not found' });
-            return;
-          }
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (!room || !room.match) return;
 
-          await match.enqueue(() => {
+          await room.match.enqueue(() => {
             const claimId = payload.claimId || `claim-${Date.now()}`;
-            const verdict = match.claimBingo(playerId, claimId);
-
+            const verdict = room.match.claimBingo(client.playerId, claimId);
             if (verdict.valid) {
-              // Authoritative coin reward for match victory
-              if (!playerId.startsWith('bot-')) {
-                const opponentId = match.getOpponentId(playerId);
-                const opponentName = match.players[opponentId]?.name || 'Opponent';
-                economy.awardMatchWin(playerId, 150, opponentName);
-              }
-
-              broadcastToMatch(matchId, 'bingo_result', {
-                claimId: verdict.claimId,
-                valid: true,
-                winnerId: verdict.winnerId,
-                reason: verdict.reason
-              });
-
-              // Send updated wallet to winner
-              const winnerWs = findClientSocket(matchId, verdict.winnerId);
-              if (winnerWs) {
-                send(winnerWs, 'wallet_update', { wallet: economy.getWallet(verdict.winnerId) });
-              }
+              handleVictory(room, verdict);
             } else {
-              broadcastToMatch(matchId, 'bingo_result', {
-                claimId: verdict.claimId,
-                valid: false,
-                winnerId: verdict.winnerId,
-                reason: verdict.reason
-              });
+              broadcastToRoom(room, 'bingo_result', verdict);
             }
           });
           break;
         }
 
-        case 'request_snapshot': {
-          const match = matches.get(matchId);
-          if (!match) {
-            send(ws, 'error', { message: 'Match not found' });
+        case 'request_rematch': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (!room) return;
+
+          const { rematchReady } = room.requestRematch(client.playerId);
+          broadcastToRoom(room, 'rematch_requested', {
+            playerId: client.playerId,
+            rematchRequests: Array.from(room.rematchRequests)
+          });
+
+          if (rematchReady) {
+            const { startingPlayerId } = room.startArranging();
+            broadcastToRoom(room, 'rematch_started', {
+              startingPlayerId,
+              scores: room.scores
+            });
+          }
+
+          syncRoomState(room);
+          break;
+        }
+
+        case 'send_reaction': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (!room) return;
+
+          // Rate limit: 1 reaction per 2 seconds
+          const now = Date.now();
+          if (now - (client.lastReactionAt || 0) < 2000) {
             return;
           }
-          const snapshot = match.getSnapshot(playerId);
-          send(ws, 'state_snapshot', { snapshot });
+          client.lastReactionAt = now;
+
+          const emoji = String(payload.emoji || '🔥').slice(0, 4);
+          broadcastToRoom(room, 'reaction', {
+            playerId: client.playerId,
+            emoji
+          });
+          break;
+        }
+
+        case 'update_settings': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (room && room.hostPlayerId === client.playerId) {
+            if (payload.turnTimerSeconds !== undefined) {
+              room.settings.turnTimerSeconds = Number(payload.turnTimerSeconds) || 0;
+            }
+            if (payload.seriesTargetWins !== undefined) {
+              room.settings.seriesTargetWins = Number(payload.seriesTargetWins) || 1;
+            }
+            syncRoomState(room);
+          }
+          break;
+        }
+
+        case 'leave_room': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (room) {
+            room.removePlayer(client.playerId);
+            broadcastToRoom(room, 'player_left', { playerId: client.playerId });
+            syncRoomState(room);
+          }
+          socketClients.delete(ws);
+          break;
+        }
+
+        case 'request_snapshot': {
+          const client = socketClients.get(ws);
+          if (!client) return;
+          const room = deviceRooms.getRoom(client.roomCode);
+          if (room) {
+            send(ws, 'room_state', { room: room.getSnapshot(client.playerId) });
+          }
           break;
         }
       }
     } catch (err) {
-      console.error('[WebSocket] Message handling error:', err);
+      console.error('[WebSocket] Message error:', err);
     }
   });
 
   ws.on('close', () => {
-    clients.delete(ws);
+    const client = socketClients.get(ws);
+    if (!client) return;
+
+    const room = deviceRooms.getRoom(client.roomCode);
+    if (room) {
+      const dcInfo = room.handleDisconnect(client.playerId, (winnerId, reason) => {
+        handleVictory(room, {
+          claimId: `forfeit-${Date.now()}`,
+          valid: true,
+          winnerId,
+          reason
+        });
+      });
+
+      if (dcInfo.shouldPause) {
+        broadcastToRoom(room, 'player_disconnected', {
+          playerId: client.playerId,
+          graceSecondsRemaining: 60,
+          pauseCount: dcInfo.pauseCount
+        });
+      }
+
+      syncRoomState(room);
+    }
+
+    socketClients.delete(ws);
   });
 });
 
 export { server, wss };
 
-if (process.env.NODE_ENV !== 'test') {
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isMain) {
   server.listen(PORT, () => {
-    console.log(`[Bingo Server] Running at http://localhost:${PORT}`);
+    console.log(`[Bingo Night Desk Server] Running live at http://localhost:${PORT}`);
   });
 }

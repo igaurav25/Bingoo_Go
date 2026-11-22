@@ -1,13 +1,17 @@
 /**
  * public/js/gameClient.js
  * 
- * Production Client Game Controller for Bingo.
- * Supports:
- * - 1v1 Matches with continuous slanted pen stroke line cutting
- * - Manual number placement (1-25) & Fisher-Yates random shuffle
- * - Private Room creation, join codes, and waiting lobby
- * - Knockout & League tournament progression & bracket visualizer
- * - Virtual Coin wallet, transaction history, and celebratory confetti
+ * Part 2 Full-Featured Bingo Client.
+ * - Single-page app router (/ and /r/:code)
+ * - Anonymous sessionTokens in localStorage (seat ownership)
+ * - Cell-swapping arrange interaction (tap cell A, tap cell B to swap)
+ * - Turn countdown synced to server deadline
+ * - Screen Wake Lock API (re-acquired on visibilitychange)
+ * - Quick emoji reactions & floating popups
+ * - Web Share API & WhatsApp invite fallback
+ * - QR code scanning modal
+ * - Bilingual English / Hindi support
+ * - Audio & haptic vibration triggers
  */
 
 import { generateRandomGrid, validateGridArrangement } from '/shared/lineModel.js';
@@ -15,257 +19,480 @@ import { AnimationQueue } from './animationQueue.js';
 import { RenderOverlay } from './renderOverlay.js';
 import { soundManager } from './audio.js';
 import { ConfettiCelebration } from './confetti.js';
+import { generateQRCodeSVG } from './qrcode.js';
+import { t, setLanguage, getLanguage } from './i18n.js';
 
-class BingoClient {
+class BingoApp {
   constructor() {
-    const params = new URLSearchParams(window.location.search);
-    this.matchId = params.get('match') || 'match-quick-1';
-    this.playerId = params.get('player') || `p-${Math.random().toString(36).slice(2, 7)}`;
-    this.playerName = params.get('name') || `Player ${this.playerId.slice(0, 4)}`;
-
-    // Authoritative Match State
-    this.status = 'ARRANGING';
-    this.grid = Array(25).fill(null);
+    this._loadSession();
+    this.currentRoom = null;
+    this.status = 'home'; // 'home' | 'lobby' | 'arranging' | 'playing' | 'finished'
     this.isLocked = false;
+    this.grid = generateRandomGrid();
+    this.selectedCellIndex = null; // for cell swapping in arrange mode
     this.markedNumbers = new Set();
     this.completedLines = [];
     this.opponentLinesCount = 0;
-    this.currentTurnPlayerId = null;
-    this.lastEventSeq = 0;
-    this.winnerId = null;
+    this.serverTimeOffset = 0;
+    this.turnTimerInterval = null;
+    this.wakeLock = null;
+    this.lastReactionSentAt = 0;
 
-    // Manual setup tracking
-    this.manualNextNumber = 1;
-
-    // Subsystems & UI
-    this.animationQueue = new AnimationQueue();
+    // Subsystems
     this.dom = this._cacheDOM();
+    this.animationQueue = new AnimationQueue();
     this.renderOverlay = new RenderOverlay(
       this.dom.lineOverlay,
-      this.dom.playerBingoWord,
-      this.dom.opponentBingoWord
+      this.dom.playerBingoRow,
+      null // Opponent mini letters updated separately
     );
     this.confetti = new ConfettiCelebration(this.dom.confettiCanvas);
 
-    // Private Room & Tournament state
-    this.currentRoom = null;
-    this.currentTournament = null;
-    this.wallet = { balance: 500, history: [] };
-
     this._bindEvents();
+    this._applySettings();
     this._connectWebSocket();
-    this._initDefaultGrid();
+    this._handleRoute();
+  }
+
+  _loadSession() {
+    try {
+      this.playerId = localStorage.getItem('bingo_playerId');
+      this.sessionToken = localStorage.getItem('bingo_sessionToken');
+      this.nickname = localStorage.getItem('bingo_nickname') || 'Player';
+      this.avatar = localStorage.getItem('bingo_avatar') || '🦊';
+      this.theme = localStorage.getItem('bingo_theme') || 'indigo';
+      this.vibrationEnabled = localStorage.getItem('bingo_vibrate') !== 'false';
+    } catch {
+      this.nickname = 'Player';
+      this.avatar = '🦊';
+      this.theme = 'indigo';
+      this.vibrationEnabled = true;
+    }
+
+    if (!this.playerId) {
+      this.playerId = `p-${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem('bingo_playerId', this.playerId);
+    }
+    if (!this.sessionToken) {
+      this.sessionToken = `tok-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
+      localStorage.setItem('bingo_sessionToken', this.sessionToken);
+    }
   }
 
   _cacheDOM() {
     return {
       confettiCanvas: document.getElementById('confetti-canvas'),
-      coinDisplay: document.getElementById('coin-balance-display'),
-      walletBtn: document.getElementById('wallet-btn'),
-      walletModal: document.getElementById('wallet-modal'),
-      closeWalletBtn: document.getElementById('close-wallet-btn'),
-      modalCoinBalance: document.getElementById('modal-coin-balance'),
-      walletHistoryList: document.getElementById('wallet-history-list'),
+      headerAvatar: document.getElementById('header-avatar'),
+      headerName: document.getElementById('header-name'),
+      profileChipBtn: document.getElementById('profile-chip-btn'),
+      settingsBtn: document.getElementById('settings-btn'),
+      disconnectBanner: document.getElementById('disconnect-banner'),
+      disconnectBannerText: document.getElementById('disconnect-banner-text'),
 
-      muteBtn: document.getElementById('mute-btn'),
-      muteIcon: document.getElementById('mute-icon'),
-      reconnectBtn: document.getElementById('reconnect-btn'),
+      // Screens
+      screenHome: document.getElementById('screen-home'),
+      screenLobby: document.getElementById('screen-lobby'),
+      screenArrange: document.getElementById('screen-arrange'),
+      screenGame: document.getElementById('screen-game'),
+      screenResult: document.getElementById('screen-result'),
 
-      // Tabs
-      tabBtns: document.querySelectorAll('.tab-btn'),
-      arenaView: document.getElementById('arena-view'),
-      roomView: document.getElementById('room-view'),
-      tournView: document.getElementById('tournament-view'),
+      // Home
+      btnCreateRoom: document.getElementById('btn-create-room'),
+      codeBoxes: [
+        document.getElementById('code-box-0'),
+        document.getElementById('code-box-1'),
+        document.getElementById('code-box-2'),
+        document.getElementById('code-box-3'),
+        document.getElementById('code-box-4')
+      ],
+      btnJoinCode: document.getElementById('btn-join-code'),
+      btnHowToPlay: document.getElementById('btn-how-to-play'),
+      btnStats: document.getElementById('btn-stats'),
 
-      // Arena
-      turnBanner: document.getElementById('turn-banner'),
-      playerBingoWord: document.getElementById('player-bingo-word'),
-      opponentBingoWord: document.getElementById('opponent-bingo-word'),
-      playerNameLabel: document.getElementById('player-name-label'),
-      opponentNameLabel: document.getElementById('opponent-name-label'),
+      // Lobby
+      lobbyCodeText: document.getElementById('lobby-code-text'),
+      btnShareLink: document.getElementById('btn-share-link'),
+      btnCopyLink: document.getElementById('btn-copy-link'),
+      btnShowQr: document.getElementById('btn-show-qr'),
+      seat1Avatar: document.getElementById('seat1-avatar'),
+      seat1Name: document.getElementById('seat1-name'),
+      seat1Status: document.getElementById('seat1-status'),
+      seat2Avatar: document.getElementById('seat2-avatar'),
+      seat2Name: document.getElementById('seat2-name'),
+      seat2Status: document.getElementById('seat2-status'),
+      timerChips: document.querySelectorAll('.timer-chip[data-time]'),
+      btnPracticeBot: document.getElementById('btn-practice-bot'),
+      btnToggleReady: document.getElementById('btn-toggle-ready'),
+
+      // Arrange
+      arrangeGridBoard: document.getElementById('arrange-grid-board'),
+      friendArrangeBadge: document.getElementById('friend-arrange-badge'),
+      btnAutoArrange: document.getElementById('btn-auto-arrange'),
+      btnResetArrange: document.getElementById('btn-reset-arrange'),
+      btnLockBoard: document.getElementById('btn-lock-board'),
+
+      // Game
+      gameOppAvatar: document.getElementById('game-opp-avatar'),
+      gameOppName: document.getElementById('game-opp-name'),
+      opponentConnDot: document.getElementById('opponent-conn-dot'),
+      opponentMiniBingo: document.getElementById('opponent-mini-bingo'),
+      turnIndicatorPill: document.getElementById('turn-indicator-pill'),
+      turnDot: document.getElementById('turn-dot'),
+      turnText: document.getElementById('turn-text'),
+      turnClockDisplay: document.getElementById('turn-clock-display'),
+      turnClockSeconds: document.getElementById('turn-clock-seconds'),
+      calledNumbersStrip: document.getElementById('called-numbers-strip'),
+      playerBingoRow: document.getElementById('player-bingo-row'),
+      gameGridBoard: document.getElementById('game-grid-board'),
+      lineOverlay: document.getElementById('line-strike-overlay'),
       bingoClaimBtn: document.getElementById('bingo-claim-btn'),
       bingoBtnText: document.getElementById('bingo-btn-text'),
-      gridBoard: document.getElementById('grid-board'),
-      lineOverlay: document.getElementById('line-strike-overlay'),
-      setupPanel: document.getElementById('setup-panel'),
-      setupStatus: document.getElementById('setup-status'),
-      shuffleBtn: document.getElementById('shuffle-btn'),
-      clearGridBtn: document.getElementById('clear-grid-btn'),
-      lockArrangementBtn: document.getElementById('lock-arrangement-btn'),
+      reactionBtns: document.querySelectorAll('.reaction-btn'),
 
-      // Private Room
-      createRoomBtn: document.getElementById('create-room-btn'),
-      joinRoomBtn: document.getElementById('join-room-btn'),
-      joinRoomCodeInput: document.getElementById('join-room-code-input'),
-      roomLobbySection: document.getElementById('room-lobby-section'),
-      lobbyCodeDisplay: document.getElementById('lobby-code-display'),
-      copyRoomCodeBtn: document.getElementById('copy-room-code-btn'),
-      lobbyPlayersList: document.getElementById('lobby-players-list'),
-      addBotBtn: document.getElementById('add-bot-btn'),
-      startRoomMatchBtn: document.getElementById('start-room-match-btn'),
+      // Result
+      resultEmoji: document.getElementById('result-emoji'),
+      resultTitle: document.getElementById('result-title'),
+      resultDesc: document.getElementById('result-desc'),
+      scorePlayer1: document.getElementById('score-player1'),
+      scorePlayer2: document.getElementById('score-player2'),
+      btnRematch: document.getElementById('btn-rematch'),
+      btnShareResult: document.getElementById('btn-share-result'),
+      btnLeaveRoom: document.getElementById('btn-leave-room'),
 
-      // Tournament
-      tournTabKo: document.getElementById('tourn-tab-ko'),
-      tournTabLeague: document.getElementById('tourn-tab-league'),
-      startKnockoutBtn: document.getElementById('start-knockout-btn'),
-      startLeagueBtn: document.getElementById('start-league-btn'),
-      knockoutContainer: document.getElementById('knockout-bracket-container'),
-      leagueContainer: document.getElementById('league-container'),
-      leaguePointsBody: document.getElementById('league-points-body'),
+      // Modals
+      modalProfile: document.getElementById('modal-profile'),
+      inputNickname: document.getElementById('input-nickname'),
+      avatarOpts: document.querySelectorAll('.avatar-opt'),
+      btnSaveProfile: document.getElementById('btn-save-profile'),
 
+      modalSettings: document.getElementById('modal-settings'),
+      btnLangEn: document.getElementById('btn-lang-en'),
+      btnLangHi: document.getElementById('btn-lang-hi'),
+      themeChips: document.querySelectorAll('.timer-chip[data-theme-val]'),
+      toggleSound: document.getElementById('toggle-sound'),
+      toggleVibration: document.getElementById('toggle-vibration'),
+      toggleReducedMotion: document.getElementById('toggle-reduced-motion'),
+
+      modalHowToPlay: document.getElementById('modal-how-to-play'),
+      modalQr: document.getElementById('modal-qr'),
+      qrContainer: document.getElementById('qr-container'),
+
+      modalCloseBtns: document.querySelectorAll('.modal-close'),
       toastContainer: document.getElementById('toast-container'),
       announcer: document.getElementById('aria-live-announcer')
     };
   }
 
   _bindEvents() {
-    this.dom.playerNameLabel.textContent = `You (${this.playerName})`;
+    this._updateProfileUI();
 
-    // Tab Switching
-    this.dom.tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.dom.tabBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const tab = btn.dataset.tab;
-        this.dom.arenaView.classList.toggle('hidden', tab !== 'arena');
-        this.dom.roomView.classList.toggle('hidden', tab !== 'room');
-        this.dom.tournView.classList.toggle('hidden', tab !== 'tournament');
+    // 5-box room code input auto-advance & paste handler
+    this.dom.codeBoxes.forEach((box, idx) => {
+      box.addEventListener('input', (e) => {
+        const val = e.target.value.toUpperCase().replace(/[^2-9BCDFGHJKMNPQRSTVWXYZ]/g, '');
+        e.target.value = val;
+        if (val && idx < 4) {
+          this.dom.codeBoxes[idx + 1].focus();
+        }
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && idx > 0) {
+          this.dom.codeBoxes[idx - 1].focus();
+        }
+      });
+      box.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        const clean = text.toUpperCase().replace(/[^2-9BCDFGHJKMNPQRSTVWXYZ]/g, '').slice(0, 5);
+        for (let i = 0; i < 5; i++) {
+          this.dom.codeBoxes[i].value = clean[i] || '';
+        }
+        if (clean.length === 5) {
+          this.dom.btnJoinCode.focus();
+        }
       });
     });
 
-    // Sound toggle
-    this.dom.muteBtn.addEventListener('click', () => {
-      const isMuted = soundManager.toggleMute();
-      this.dom.muteIcon.textContent = isMuted ? '🔇' : '🔊';
-      this.showToast(isMuted ? 'Sound muted' : 'Sound unmuted');
+    // Create Room
+    this.dom.btnCreateRoom.addEventListener('click', () => {
+      this._unlockAudio();
+      this._send('create_room', {
+        name: this.nickname,
+        avatar: this.avatar,
+        playerId: this.playerId,
+        sessionToken: this.sessionToken
+      });
     });
 
-    // Reconnect / Sync
-    this.dom.reconnectBtn.addEventListener('click', () => {
-      this.requestSnapshot();
-      this._send('get_wallet');
-      this.showToast('Synchronizing state...');
-    });
-
-    // Wallet Modal
-    this.dom.walletBtn.addEventListener('click', () => {
-      this._renderWalletModal();
-      this.dom.walletModal.classList.remove('hidden');
-    });
-    this.dom.closeWalletBtn.addEventListener('click', () => {
-      this.dom.walletModal.classList.add('hidden');
-    });
-
-    // Setup: Quick Shuffle
-    this.dom.shuffleBtn.addEventListener('click', () => {
-      if (this.isLocked) return;
-      this.grid = generateRandomGrid();
-      this._renderBoardCells();
-      this._updateSetupStatus();
-    });
-
-    // Setup: Clear Grid
-    this.dom.clearGridBtn.addEventListener('click', () => {
-      if (this.isLocked) return;
-      this.grid = Array(25).fill(null);
-      this.manualNextNumber = 1;
-      this._renderBoardCells();
-      this._updateSetupStatus();
-    });
-
-    // Setup: Lock & Ready
-    this.dom.lockArrangementBtn.addEventListener('click', () => {
-      if (this.isLocked) return;
-      const val = validateGridArrangement(this.grid);
-      if (!val.valid) {
-        this.showToast(val.error || 'Please fill all 25 numbers first', 'error');
+    // Join Code
+    this.dom.btnJoinCode.addEventListener('click', () => {
+      this._unlockAudio();
+      const code = this.dom.codeBoxes.map(b => b.value).join('');
+      if (code.length < 5) {
+        this.showToast('Please enter a 5-character room code.');
         return;
       }
-      this._send('set_arrangement', { grid: this.grid });
+      this.joinRoomByCode(code);
     });
 
-    // BINGO Claim button
+    // Share / Copy Link / QR Code
+    this.dom.btnShareLink.addEventListener('click', () => this.shareRoomLink());
+    this.dom.btnCopyLink.addEventListener('click', () => this.copyRoomLink());
+    this.dom.lobbyCodeText.addEventListener('click', () => this.copyRoomCode());
+    this.dom.btnShowQr.addEventListener('click', () => this.showQRCodeModal());
+
+    // Practice vs Bot
+    this.dom.btnPracticeBot.addEventListener('click', () => {
+      this._send('add_bot');
+    });
+
+    // Ready Toggle in Lobby
+    this.dom.btnToggleReady.addEventListener('click', () => {
+      this._send('set_ready');
+    });
+
+    // Turn Timer Host options
+    this.dom.timerChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        if (this.currentRoom && this.currentRoom.hostPlayerId === this.playerId) {
+          this.dom.timerChips.forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          const secs = Number(chip.dataset.time) || 0;
+          this._send('update_settings', { turnTimerSeconds: secs });
+        }
+      });
+    });
+
+    // Arrange Screen Actions
+    this.dom.btnAutoArrange.addEventListener('click', () => {
+      this.grid = generateRandomGrid();
+      this.selectedCellIndex = null;
+      this._renderArrangeGrid();
+      this._vibrate(20);
+    });
+
+    this.dom.btnResetArrange.addEventListener('click', () => {
+      this.grid = Array.from({ length: 25 }, (_, i) => i + 1);
+      this.selectedCellIndex = null;
+      this._renderArrangeGrid();
+      this._vibrate(20);
+    });
+
+    this.dom.btnLockBoard.addEventListener('click', () => {
+      const val = validateGridArrangement(this.grid);
+      if (!val.valid) {
+        this.showToast('Card arrangement is invalid.');
+        return;
+      }
+      this.isLocked = true;
+      this.dom.btnLockBoard.disabled = true;
+      this._send('lock_board', { grid: this.grid });
+      this.showToast(t('boardLocked'));
+    });
+
+    // BINGO Claim
     this.dom.bingoClaimBtn.addEventListener('click', () => {
       this.handleClaimPress();
     });
 
-    // Private Room: Create Room
-    this.dom.createRoomBtn.addEventListener('click', () => {
-      this._send('create_private_room', { playerName: this.playerName });
-    });
-
-    // Private Room: Join Room
-    this.dom.joinRoomBtn.addEventListener('click', () => {
-      const code = this.dom.joinRoomCodeInput.value.trim().toUpperCase();
-      if (!code) {
-        this.showToast('Please enter a room code', 'error');
-        return;
-      }
-      this._send('join_private_room', { roomCode: code, playerName: this.playerName });
-    });
-
-    // Copy room code
-    this.dom.copyRoomCodeBtn.addEventListener('click', () => {
-      if (this.currentRoom) {
-        navigator.clipboard?.writeText(this.currentRoom.code);
-        this.showToast(`Room code ${this.currentRoom.code} copied!`);
-      }
-    });
-
-    // Add bot to room
-    this.dom.addBotBtn.addEventListener('click', () => {
-      if (this.currentRoom) {
-        this._send('add_room_bot', { roomCode: this.currentRoom.code });
-      }
-    });
-
-    // Start private room match
-    this.dom.startRoomMatchBtn.addEventListener('click', () => {
-      if (this.currentRoom) {
-        this._send('start_private_match', { roomCode: this.currentRoom.code });
-      }
-    });
-
-    // Tournament Start buttons
-    this.dom.startKnockoutBtn.addEventListener('click', () => {
-      this._send('create_tournament', {
-        tournamentType: 'KNOCKOUT',
-        tournamentName: 'Neon Championship',
-        playerName: this.playerName
+    // Reaction Emojis
+    this.dom.reactionBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const emoji = btn.dataset.emoji;
+        const now = Date.now();
+        if (now - this.lastReactionSentAt >= 2000) {
+          this.lastReactionSentAt = now;
+          this._send('send_reaction', { emoji });
+          this._showFloatingReaction(this.playerId, emoji);
+          this._vibrate(25);
+        }
       });
     });
 
-    this.dom.startLeagueBtn.addEventListener('click', () => {
-      this._send('create_tournament', {
-        tournamentType: 'LEAGUE',
-        tournamentName: 'Premier Bingo League',
-        playerName: this.playerName
+    // Rematch & Leave
+    this.dom.btnRematch.addEventListener('click', () => {
+      this.dom.btnRematch.disabled = true;
+      this.dom.btnRematch.textContent = t('rematchRequested');
+      this._send('request_rematch');
+    });
+
+    this.dom.btnLeaveRoom.addEventListener('click', () => {
+      this._send('leave_room');
+      window.history.pushState({}, '', '/');
+      this._showScreen('home');
+    });
+
+    this.dom.btnShareResult.addEventListener('click', () => {
+      this.shareResultCard();
+    });
+
+    // Profile & Modal Openers
+    this.dom.profileChipBtn.addEventListener('click', () => {
+      this.dom.inputNickname.value = this.nickname;
+      this.dom.avatarOpts.forEach(o => o.classList.toggle('selected', o.dataset.avatar === this.avatar));
+      this.dom.modalProfile.classList.remove('hidden');
+    });
+
+    this.dom.avatarOpts.forEach(opt => {
+      opt.addEventListener('click', () => {
+        this.dom.avatarOpts.forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
       });
     });
 
-    this.dom.tournTabKo.addEventListener('click', () => {
-      this.dom.knockoutContainer.style.display = 'flex';
-      this.dom.leagueContainer.style.display = 'none';
-      this.dom.tournTabKo.classList.add('btn-primary');
-      this.dom.tournTabKo.classList.remove('btn-secondary');
-      this.dom.tournTabLeague.classList.add('btn-secondary');
-      this.dom.tournTabLeague.classList.remove('btn-primary');
+    this.dom.btnSaveProfile.addEventListener('click', () => {
+      const newName = (this.dom.inputNickname.value.trim() || 'Player').slice(0, 16);
+      const selOpt = document.querySelector('.avatar-opt.selected');
+      const newAvatar = selOpt ? selOpt.dataset.avatar : this.avatar;
+
+      this.nickname = newName;
+      this.avatar = newAvatar;
+      localStorage.setItem('bingo_nickname', newName);
+      localStorage.setItem('bingo_avatar', newAvatar);
+
+      this._updateProfileUI();
+      this.dom.modalProfile.classList.add('hidden');
+      this.showToast('Profile updated!');
     });
 
-    this.dom.tournTabLeague.addEventListener('click', () => {
-      this.dom.knockoutContainer.style.display = 'none';
-      this.dom.leagueContainer.style.display = 'block';
-      this.dom.tournTabLeague.classList.add('btn-primary');
-      this.dom.tournTabLeague.classList.remove('btn-secondary');
-      this.dom.tournTabKo.classList.add('btn-secondary');
-      this.dom.tournTabKo.classList.remove('btn-primary');
+    this.dom.settingsBtn.addEventListener('click', () => {
+      this.dom.modalSettings.classList.remove('hidden');
+    });
+
+    this.dom.btnHowToPlay.addEventListener('click', () => {
+      this.dom.modalHowToPlay.classList.remove('hidden');
+    });
+
+    this.dom.btnStats.addEventListener('click', () => {
+      this._showStatsToast();
+    });
+
+    // Modal Close
+    this.dom.modalCloseBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const modalId = btn.dataset.close;
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('hidden');
+      });
+    });
+
+    // Language Toggle
+    this.dom.btnLangEn.addEventListener('click', () => {
+      setLanguage('en');
+      this._applyLanguage();
+    });
+    this.dom.btnLangHi.addEventListener('click', () => {
+      setLanguage('hi');
+      this._applyLanguage();
+    });
+
+    // Background Themes
+    this.dom.themeChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.dom.themeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        const th = chip.dataset.themeVal;
+        this.theme = th;
+        document.body.dataset.theme = th;
+        localStorage.setItem('bingo_theme', th);
+      });
+    });
+
+    // Toggles
+    this.dom.toggleSound.addEventListener('change', (e) => {
+      if (!e.target.checked && !soundManager.isMuted) soundManager.toggleMute();
+      if (e.target.checked && soundManager.isMuted) soundManager.toggleMute();
+    });
+
+    this.dom.toggleVibration.addEventListener('change', (e) => {
+      this.vibrationEnabled = e.target.checked;
+      localStorage.setItem('bingo_vibrate', String(e.target.checked));
+    });
+
+    this.dom.toggleReducedMotion.addEventListener('change', (e) => {
+      document.body.classList.toggle('reduce-motion', e.target.checked);
+    });
+
+    // Visibility & Resume Reconnect
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this._acquireWakeLock();
+        if (this.currentRoom) {
+          this._send('request_snapshot');
+        }
+      }
+    });
+
+    window.addEventListener('pageshow', () => {
+      if (this.currentRoom) {
+        this._send('request_snapshot');
+      }
     });
   }
 
-  _initDefaultGrid() {
-    this.grid = generateRandomGrid();
-    this._renderBoardCells();
-    this._updateSetupStatus();
+  _unlockAudio() {
+    soundManager._initCtx();
+  }
+
+  _vibrate(pattern = 40) {
+    if (this.vibrationEnabled && navigator.vibrate) {
+      try { navigator.vibrate(pattern); } catch {}
+    }
+  }
+
+  async _acquireWakeLock() {
+    if ('wakeLock' in navigator && this.status === 'playing') {
+      try {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+      } catch {}
+    }
+  }
+
+  _applySettings() {
+    document.body.dataset.theme = this.theme;
+    this.dom.themeChips.forEach(c => {
+      c.classList.toggle('active', c.dataset.themeVal === this.theme);
+    });
+    this._applyLanguage();
+  }
+
+  _applyLanguage() {
+    const lang = getLanguage();
+    this.dom.btnLangEn.classList.toggle('active', lang === 'en');
+    this.dom.btnLangHi.classList.toggle('active', lang === 'hi');
+
+    document.querySelectorAll('[id^="lbl-"]').forEach(el => {
+      const key = el.id.replace('lbl-', '');
+      if (key) {
+        const camel = key.replace(/-([a-z])/g, g => g[1].toUpperCase());
+        el.textContent = t(camel) || el.textContent;
+      }
+    });
+  }
+
+  _updateProfileUI() {
+    this.dom.headerAvatar.textContent = this.avatar;
+    this.dom.headerName.textContent = this.nickname;
+  }
+
+  _showScreen(screenName) {
+    this.status = screenName;
+    this.dom.screenHome.classList.toggle('hidden', screenName !== 'home');
+    this.dom.screenLobby.classList.toggle('hidden', screenName !== 'lobby');
+    this.dom.screenArrange.classList.toggle('hidden', screenName !== 'arranging');
+    this.dom.screenGame.classList.toggle('hidden', screenName !== 'playing');
+    this.dom.screenResult.classList.toggle('hidden', screenName !== 'finished');
+  }
+
+  _handleRoute() {
+    const path = window.location.pathname;
+    const match = path.match(/^\/r\/([A-Za-z0-9]+)/);
+    if (match && match[1]) {
+      const code = match[1].toUpperCase();
+      this.joinRoomByCode(code);
+    } else {
+      this._showScreen('home');
+    }
   }
 
   _connectWebSocket() {
@@ -274,9 +501,11 @@ class BingoClient {
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
-      console.log('[BingoClient] Connected.');
-      this._send('join_match', { playerName: this.playerName });
-      this._send('get_wallet');
+      console.log('[Bingo] WebSocket connected.');
+      this._send('ping');
+      if (this.currentRoom) {
+        this.joinRoomByCode(this.currentRoom.code);
+      }
     };
 
     this.ws.onmessage = (event) => {
@@ -284,100 +513,98 @@ class BingoClient {
         const msg = JSON.parse(event.data);
         this._handleServerMessage(msg);
       } catch (err) {
-        console.error('[BingoClient] Parse message error:', err);
+        console.error('[Bingo] Parse error:', err);
       }
     };
 
     this.ws.onclose = () => {
-      console.warn('[BingoClient] Connection lost. Reconnecting in 2s...');
-      setTimeout(() => this._connectWebSocket(), 2000);
+      console.warn('[Bingo] WebSocket disconnected. Auto-reconnecting...');
+      setTimeout(() => this._connectWebSocket(), 1800);
     };
+
+    // Heartbeat
+    setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this._send('ping');
+      }
+    }, 15000);
   }
 
   _send(type, payload = {}) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type,
-        matchId: this.matchId,
-        playerId: this.playerId,
-        payload
-      }));
+      this.ws.send(JSON.stringify({ type, payload }));
     }
   }
 
-  requestSnapshot() {
-    this._send('request_snapshot');
+  joinRoomByCode(code) {
+    this._unlockAudio();
+    this._send('join_room', {
+      code,
+      name: this.nickname,
+      avatar: this.avatar,
+      playerId: this.playerId,
+      sessionToken: this.sessionToken
+    });
   }
 
   _handleServerMessage(msg) {
     const { type } = msg;
 
     switch (type) {
-      case 'state_snapshot': {
-        this._applySnapshot(msg.snapshot);
+      case 'pong': {
+        if (msg.time) {
+          this.serverTimeOffset = msg.time - Date.now();
+        }
         break;
       }
 
-      case 'wallet_update': {
-        this.wallet = msg.wallet;
-        this.dom.coinDisplay.textContent = String(msg.wallet.balance);
-        this.dom.modalCoinBalance.textContent = String(msg.wallet.balance);
-        this._renderWalletModal();
+      case 'tab_conflict': {
+        this.dom.disconnectBanner.style.display = 'flex';
+        this.dom.disconnectBannerText.textContent = t('openedInAnotherTab');
+        this.showToast(t('openedInAnotherTab'), 'error');
         break;
       }
 
-      case 'private_room_created':
-      case 'private_room_updated': {
+      case 'room_created':
+      case 'room_joined': {
         this.currentRoom = msg.room;
-        this._renderRoomLobby(msg.room);
+        window.history.pushState({}, '', `/r/${msg.code}`);
+        this._renderLobby(msg.room);
+        this._showScreen('lobby');
         break;
       }
 
-      case 'private_match_started': {
-        this.matchId = msg.matchId;
-        this.showToast(`Match started in Room ${msg.roomCode}!`, 'success');
-        // Switch to arena view
-        this.dom.tabBtns[0].click();
-        this._send('join_match', { playerName: this.playerName });
+      case 'room_state': {
+        this.currentRoom = msg.room;
+        this._syncRoomState(msg.room);
         break;
       }
 
-      case 'tournament_created': {
-        this.currentTournament = msg.tournament;
-        this._renderTournament(msg.tournament);
-        this.showToast(`${msg.tournament.name} created!`, 'success');
-        // Start immediately
-        this._send('start_tournament', { tournamentId: msg.tournament.id });
+      case 'start_arranging': {
+        this.isLocked = false;
+        this.dom.btnLockBoard.disabled = false;
+        this.selectedCellIndex = null;
+        this._renderArrangeGrid();
+        this._showScreen('arranging');
         break;
       }
 
-      case 'tournament_updated': {
-        this.currentTournament = msg.tournament;
-        this._renderTournament(msg.tournament);
-        break;
-      }
-
-      case 'arrangement_locked': {
+      case 'board_locked': {
         if (msg.playerId === this.playerId) {
           this.isLocked = true;
-          this.grid = msg.grid;
-          this.dom.setupStatus.textContent = 'Arrangement locked! Waiting for opponent...';
-          this.dom.shuffleBtn.disabled = true;
-          this.dom.clearGridBtn.disabled = true;
-          this.dom.lockArrangementBtn.disabled = true;
-          this._renderBoardCells();
-          this.announce('Your grid is locked.');
+          this.dom.btnLockBoard.disabled = true;
         }
         break;
       }
 
       case 'match_started': {
-        this.status = 'IN_PROGRESS';
-        this.currentTurnPlayerId = msg.currentTurnPlayerId;
-        this.dom.setupPanel.style.display = 'none';
-        this._updateTurnBanner();
-        this._renderBoardCells();
-        this.showToast('Match started! Tap an uncalled number on your turn.');
+        this.status = 'playing';
+        this._acquireWakeLock();
+        this._showScreen('playing');
+        this._renderGameGrid();
+        this._updateTurnBanner(msg.currentTurnPlayerId);
+        this._startTurnCountdown(msg.turnDeadline);
+        this.showToast('Match started! Both boards locked.');
         break;
       }
 
@@ -396,385 +623,392 @@ class BingoClient {
         break;
       }
 
+      case 'reaction': {
+        this._showFloatingReaction(msg.playerId, msg.emoji);
+        break;
+      }
+
+      case 'player_disconnected': {
+        this.dom.disconnectBanner.style.display = 'flex';
+        this.dom.disconnectBannerText.textContent = t('friendDisconnected', { seconds: msg.graceSecondsRemaining || 60 });
+        this.dom.opponentConnDot.classList.add('disconnected');
+        break;
+      }
+
+      case 'player_reconnected': {
+        this.dom.disconnectBanner.style.display = 'none';
+        this.dom.opponentConnDot.classList.remove('disconnected');
+        this.showToast('Friend reconnected!', 'success');
+        break;
+      }
+
+      case 'rematch_started': {
+        this.isLocked = false;
+        this.dom.btnRematch.disabled = false;
+        this.dom.btnRematch.textContent = t('rematch');
+        this.markedNumbers.clear();
+        this.completedLines = [];
+        this.renderOverlay.clear();
+        this._showScreen('arranging');
+        this._renderArrangeGrid();
+        break;
+      }
+
       case 'error': {
         this.showToast(msg.message, 'error');
+        if (msg.code === 'ROOM_NOT_FOUND') {
+          window.history.pushState({}, '', '/');
+          this._showScreen('home');
+        }
         break;
       }
     }
   }
 
-  _renderRoomLobby(room) {
-    this.dom.roomLobbySection.style.display = 'flex';
-    this.dom.lobbyCodeDisplay.textContent = room.code;
-    this.dom.lobbyPlayersList.innerHTML = '';
+  _renderLobby(room) {
+    this.dom.lobbyCodeText.textContent = room.code;
+    const isHost = room.hostPlayerId === this.playerId;
 
-    room.players.forEach(p => {
-      const row = document.createElement('div');
-      row.className = 'player-item';
-      row.innerHTML = `
-        <span style="font-weight:700;">${p.name} ${p.isBot ? '🤖' : ''}</span>
-        <div>
-          ${p.isHost ? '<span class="badge badge-host">HOST</span>' : ''}
-          <span class="badge badge-ready">READY</span>
-        </div>
-      `;
-      this.dom.lobbyPlayersList.appendChild(row);
-    });
+    const p1 = room.players[0];
+    const p2 = room.players[1];
 
-    const isHost = room.hostId === this.playerId;
-    this.dom.addBotBtn.style.display = isHost && room.playerCount < 2 ? 'block' : 'none';
-    this.dom.startRoomMatchBtn.style.display = isHost ? 'block' : 'none';
-    this.dom.startRoomMatchBtn.disabled = room.playerCount < 2;
+    if (p1) {
+      this.dom.seat1Avatar.textContent = p1.avatar;
+      this.dom.seat1Name.textContent = p1.id === this.playerId ? `${p1.name} (${t('host')})` : p1.name;
+      this.dom.seat1Status.className = `status-badge ${p1.isReady ? 'status-ready' : 'status-waiting'}`;
+      this.dom.seat1Status.textContent = p1.isReady ? t('ready') : t('notReady');
+    }
+
+    if (p2) {
+      this.dom.seat2Avatar.textContent = p2.avatar;
+      this.dom.seat2Name.textContent = p2.id === this.playerId ? `${p2.name} (${t('guest')})` : p2.name;
+      this.dom.seat2Status.className = `status-badge ${p2.isReady ? 'status-ready' : 'status-waiting'}`;
+      this.dom.seat2Status.textContent = p2.isReady ? t('ready') : t('notReady');
+      this.dom.btnPracticeBot.style.display = 'none';
+    } else {
+      this.dom.seat2Avatar.textContent = '⏳';
+      this.dom.seat2Name.textContent = t('waitingForFriend');
+      this.dom.seat2Status.className = 'status-badge status-waiting';
+      this.dom.seat2Status.textContent = '...';
+      this.dom.btnPracticeBot.style.display = isHost ? 'block' : 'none';
+    }
   }
 
-  _renderTournament(tourn) {
-    if (tourn.type === 'KNOCKOUT') {
-      this.dom.tournTabKo.click();
-      this.dom.knockoutContainer.innerHTML = '';
+  _syncRoomState(room) {
+    if (room.isPaused) {
+      this.dom.disconnectBanner.style.display = 'flex';
+      this.dom.disconnectBannerText.textContent = t('friendDisconnected', {
+        seconds: room.disconnectGraceSecondsRemaining || 60
+      });
+    } else {
+      this.dom.disconnectBanner.style.display = 'none';
+    }
 
-      tourn.knockoutMatches.forEach(m => {
-        const card = document.createElement('div');
-        card.className = 'bracket-match glass-panel';
-        const p1Name = m.player1 ? m.player1.name : 'TBD';
-        const p2Name = m.player2 ? m.player2.name : 'TBD';
-        const winText = m.winner ? `🏆 Winner: ${m.winner.name}` : `Status: ${m.status}`;
+    if (this.status === 'lobby') {
+      this._renderLobby(room);
+    } else if (this.status === 'arranging') {
+      const other = room.players.find(p => p.id !== this.playerId);
+      if (other && other.isBoardLocked) {
+        this.dom.friendArrangeBadge.className = 'status-badge status-ready';
+        this.dom.friendArrangeBadge.textContent = t('friendReady');
+      }
+    } else if (this.status === 'playing' && room.match) {
+      this._updateTurnBanner(room.match.currentTurnPlayerId);
+      this._startTurnCountdown(room.turnDeadline);
+      if (room.match.opponentState) {
+        this.opponentLinesCount = room.match.opponentState.linesCompleted || 0;
+        this._updateOpponentMiniBingo(this.opponentLinesCount);
+      }
+    }
+  }
 
-        card.innerHTML = `
-          <div class="bracket-round-title">${m.round}</div>
-          <div class="bracket-versus">
-            <span>${p1Name}</span>
-            <span style="color:var(--text-muted);">vs</span>
-            <span>${p2Name}</span>
-          </div>
-          <div style="font-size:0.8rem; color:var(--electric-blue); font-weight:700;">${winText}</div>
-        `;
-        this.dom.knockoutContainer.appendChild(card);
+  /**
+   * Cell Swapping Arrange Grid Interaction (P0):
+   * Tap cell A (highlights), tap cell B to swap numbers!
+   */
+  _renderArrangeGrid() {
+    this.dom.arrangeGridBoard.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+      const num = this.grid[i];
+      const cell = document.createElement('button');
+      cell.className = `cell ${this.selectedCellIndex === i ? 'selected' : ''}`;
+      cell.textContent = String(num);
+
+      cell.addEventListener('click', () => {
+        if (this.isLocked) return;
+        this._handleCellSwapTap(i);
       });
 
-      if (tourn.champion) {
-        const champCard = document.createElement('div');
-        champCard.className = 'bracket-match glass-panel';
-        champCard.style.border = '1px solid var(--gold-yellow)';
-        champCard.innerHTML = `
-          <div class="bracket-round-title" style="color:var(--gold-yellow);">👑 Tournament Champion</div>
-          <div style="font-size:1.2rem; font-weight:900; color:#ffffff;">${tourn.champion.name}</div>
-          <div style="color:var(--gold-yellow); font-weight:800;">Prize: 🪙 500 Virtual Coins</div>
-        `;
-        this.dom.knockoutContainer.appendChild(champCard);
-      }
+      this.dom.arrangeGridBoard.appendChild(cell);
+    }
+  }
+
+  _handleCellSwapTap(index) {
+    this._vibrate(30);
+    if (this.selectedCellIndex === null) {
+      // First cell selected
+      this.selectedCellIndex = index;
+      soundManager.playMark();
+      this._renderArrangeGrid();
+    } else if (this.selectedCellIndex === index) {
+      // Deselect
+      this.selectedCellIndex = null;
+      this._renderArrangeGrid();
     } else {
-      // League
-      this.dom.tournTabLeague.click();
-      this.dom.leaguePointsBody.innerHTML = '';
-
-      tourn.pointsTable.forEach((row, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-weight:800; color:var(--gold-yellow);">#${idx + 1}</td>
-          <td style="font-weight:700;">${row.name}</td>
-          <td>${row.played}</td>
-          <td style="color:#2b9348;">${row.won}</td>
-          <td style="color:#d90429;">${row.lost}</td>
-          <td style="font-weight:900; color:var(--electric-blue);">${row.points}</td>
-        `;
-        this.dom.leaguePointsBody.appendChild(tr);
-      });
+      // Second cell tapped: swap numbers!
+      const a = this.selectedCellIndex;
+      const b = index;
+      [this.grid[a], this.grid[b]] = [this.grid[b], this.grid[a]];
+      this.selectedCellIndex = null;
+      soundManager.playLineStroke(150);
+      this._renderArrangeGrid();
     }
   }
 
-  _renderWalletModal() {
-    this.dom.walletHistoryList.innerHTML = '';
-    if (!this.wallet.history || this.wallet.history.length === 0) {
-      this.dom.walletHistoryList.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:10px;">No transactions yet</div>';
-      return;
+  _renderGameGrid() {
+    this.dom.gameGridBoard.innerHTML = '';
+    const other = this.currentRoom?.players.find(p => p.id !== this.playerId);
+    if (other) {
+      this.dom.gameOppAvatar.textContent = other.avatar;
+      this.dom.gameOppName.textContent = other.name;
     }
-
-    this.wallet.history.forEach(tx => {
-      const item = document.createElement('div');
-      item.className = 'tx-item';
-      item.innerHTML = `
-        <div>
-          <div style="font-weight:700;">${tx.description}</div>
-          <div style="font-size:0.75rem; color:var(--text-muted);">${new Date(tx.timestamp).toLocaleTimeString()}</div>
-        </div>
-        <div class="tx-amount">+${tx.amount} 🪙</div>
-      `;
-      this.dom.walletHistoryList.appendChild(item);
-    });
-  }
-
-  _updateSetupStatus() {
-    if (this.isLocked) return;
-    const filledCount = this.grid.filter(n => Number.isInteger(n)).length;
-    const val = validateGridArrangement(this.grid);
-
-    if (val.valid) {
-      this.dom.setupStatus.textContent = 'All 25 numbers placed! Ready to lock.';
-      this.dom.lockArrangementBtn.disabled = false;
-    } else {
-      this.dom.setupStatus.textContent = `Manual arrangement: placed ${filledCount}/25. Next: ${this.manualNextNumber}.`;
-      this.dom.lockArrangementBtn.disabled = true;
-    }
-  }
-
-  _applySnapshot(snapshot) {
-    if (!snapshot) return;
-
-    this.status = snapshot.status;
-    this.currentTurnPlayerId = snapshot.currentTurnPlayerId;
-    this.winnerId = snapshot.winnerId;
-
-    if (snapshot.myState) {
-      this.isLocked = snapshot.myState.isLocked;
-      if (snapshot.myState.grid) {
-        this.grid = snapshot.myState.grid;
-      }
-      this.markedNumbers = new Set(snapshot.myState.markedNumbers || []);
-      this.completedLines = snapshot.myState.completedLines || [];
-    }
-
-    if (snapshot.opponentState) {
-      this.opponentLinesCount = snapshot.opponentState.linesCompleted || 0;
-      if (snapshot.opponentState.name) {
-        this.dom.opponentNameLabel.textContent = `Opponent (${snapshot.opponentState.name})`;
-      }
-    }
-
-    if (this.isLocked || this.status === 'IN_PROGRESS' || this.status === 'FINISHED') {
-      this.dom.setupPanel.style.display = 'none';
-    }
-
-    this._renderBoardCells();
-    this._updateTurnBanner();
-    this._updateClaimButtonState();
-    this.renderOverlay.hydrate(this.completedLines, this.opponentLinesCount);
-
-    for (const id of this.completedLines) {
-      this.animationQueue.markSeen(id);
-    }
-  }
-
-  _renderBoardCells() {
-    this.dom.gridBoard.innerHTML = '';
-    if (!this.grid) return;
 
     for (let i = 0; i < 25; i++) {
       const num = this.grid[i];
-      const isMarked = num && this.markedNumbers.has(num);
+      const isMarked = this.markedNumbers.has(num);
 
       const cell = document.createElement('button');
       cell.className = `cell ${isMarked ? 'marked' : ''}`;
-      cell.dataset.index = String(i);
+      cell.dataset.number = String(num);
+      cell.textContent = String(num);
 
-      if (num !== null) {
-        cell.dataset.number = String(num);
-        cell.setAttribute('aria-label', `Number ${num}${isMarked ? ', marked' : ''}`);
-
-        const numSpan = document.createElement('span');
-        numSpan.className = 'cell-number';
-        numSpan.textContent = String(num);
-        cell.appendChild(numSpan);
-
-        // Non-strike ink stamp circle (Constraint 4)
-        const stamp = document.createElement('div');
-        stamp.className = 'cell-ink-stamp';
-        cell.appendChild(stamp);
-      } else {
-        cell.setAttribute('aria-label', `Empty cell ${i + 1}`);
-      }
+      const stamp = document.createElement('div');
+      stamp.className = 'cell-ink-stamp';
+      cell.appendChild(stamp);
 
       cell.addEventListener('click', () => {
-        if (this.status === 'ARRANGING' && !this.isLocked) {
-          this.handleManualPlacement(i);
-        } else if (this.status === 'IN_PROGRESS') {
-          if (num !== null) this.handleCellClick(num);
-        }
+        this.handleCellCall(num);
       });
 
-      this.dom.gridBoard.appendChild(cell);
+      this.dom.gameGridBoard.appendChild(cell);
     }
   }
 
-  handleManualPlacement(cellIndex) {
-    if (this.grid[cellIndex] !== null) {
-      // Cell already has a number
+  handleCellCall(num) {
+    if (this.status !== 'playing') return;
+    if (this.currentRoom?.match?.currentTurnPlayerId !== this.playerId) {
+      this.showToast(t('friendTurn', { name: this.dom.gameOppName.textContent }));
+      return;
+    }
+    if (this.markedNumbers.has(num)) {
+      this.showToast(`Number ${num} is already called.`);
       return;
     }
 
-    // Find smallest unplaced number in 1..25
-    const placedSet = new Set(this.grid.filter(n => n !== null));
-    let nextNum = 1;
-    while (placedSet.has(nextNum) && nextNum <= 25) {
-      nextNum++;
-    }
-
-    if (nextNum <= 25) {
-      this.grid[cellIndex] = nextNum;
-      this.manualNextNumber = nextNum + 1;
-      this._renderBoardCells();
-      this._updateSetupStatus();
-      soundManager.playMark();
-    }
-  }
-
-  handleCellClick(number) {
-    if (this.status !== 'IN_PROGRESS') return;
-    if (this.currentTurnPlayerId !== this.playerId) {
-      this.showToast('Please wait for your turn');
-      return;
-    }
-    if (this.markedNumbers.has(number)) {
-      this.showToast(`Number ${number} is already marked`);
-      return;
-    }
-
-    this._send('call_number', { number });
+    this._send('call_number', { number: num });
   }
 
   _handleNumberCalled(msg) {
-    const { number, nextTurnPlayerId } = msg;
+    const { number, nextTurnPlayerId, isAutoPicked } = msg;
     this.markedNumbers.add(number);
-    this.currentTurnPlayerId = nextTurnPlayerId;
 
-    const cell = this.dom.gridBoard.querySelector(`[data-number="${number}"]`);
+    // Update cell
+    const cell = this.dom.gameGridBoard.querySelector(`[data-number="${number}"]`);
     if (cell) {
       cell.classList.add('marked');
-      cell.setAttribute('aria-label', `Number ${number}, marked`);
     }
 
+    // Append to called numbers strip
+    const badge = document.createElement('div');
+    badge.className = 'called-num-badge';
+    badge.textContent = String(number);
+    if (isAutoPicked) badge.title = 'Auto-picked by timer';
+    this.dom.calledNumbersStrip.appendChild(badge);
+
     soundManager.playMark();
-    this._updateTurnBanner();
+    this._vibrate(40);
+
+    if (this.currentRoom && this.currentRoom.match) {
+      this.currentRoom.match.currentTurnPlayerId = nextTurnPlayerId;
+    }
+    this._updateTurnBanner(nextTurnPlayerId);
+    this._startTurnCountdown(msg.turnDeadline);
   }
 
   _handleLinesCompleted(msg) {
-    if (msg.eventSeq) {
-      this.lastEventSeq = msg.eventSeq;
-    }
-
     if (msg.newLines && Array.isArray(msg.newLines)) {
       setTimeout(() => {
         for (const lineInfo of msg.newLines) {
           this.animationQueue.enqueue(lineInfo.id, async (isAccelerated) => {
             await this.renderOverlay.animateLineStrike(lineInfo, isAccelerated);
             this.completedLines.push(lineInfo.id);
-
-            const lineName = lineInfo.type === 'row' ? `Row ${lineInfo.index + 1}` : `Column ${lineInfo.index + 1}`;
-            const letterText = lineInfo.letter ? ` Letter ${lineInfo.letter} crossed.` : '';
-            this.announce(`${lineName} completed.${letterText}`);
-
+            this._vibrate([60, 40, 60]);
             this._updateClaimButtonState();
           });
         }
       }, 120);
     } else if (msg.playerId && msg.playerId !== this.playerId) {
       this.opponentLinesCount = msg.linesCompleted;
-      this.renderOverlay.syncOpponentLines(this.opponentLinesCount);
+      this._updateOpponentMiniBingo(this.opponentLinesCount);
     }
+  }
+
+  _updateOpponentMiniBingo(count) {
+    const letters = this.dom.opponentMiniBingo.querySelectorAll('.mini-letter');
+    letters.forEach((el, idx) => {
+      el.classList.toggle('struck', idx < count);
+    });
+  }
+
+  _updateTurnBanner(turnPlayerId) {
+    const isMyTurn = turnPlayerId === this.playerId;
+    this.dom.turnIndicatorPill.className = `turn-pill ${isMyTurn ? 'my-turn' : 'friend-turn'}`;
+    this.dom.turnText.textContent = isMyTurn ? t('yourTurn') : t('friendTurn', { name: this.dom.gameOppName.textContent });
+  }
+
+  _startTurnCountdown(deadline) {
+    clearInterval(this.turnTimerInterval);
+    if (!deadline) {
+      this.dom.turnClockDisplay.style.display = 'none';
+      return;
+    }
+
+    this.dom.turnClockDisplay.style.display = 'block';
+    const update = () => {
+      const now = Date.now() + this.serverTimeOffset;
+      const rem = Math.max(0, Math.ceil((deadline - now) / 1000));
+      this.dom.turnClockSeconds.textContent = String(rem);
+      if (rem <= 0) {
+        clearInterval(this.turnTimerInterval);
+      }
+    };
+    update();
+    this.turnTimerInterval = setInterval(update, 500);
   }
 
   _updateClaimButtonState() {
     const count = this.completedLines.length;
-
-    if (this.isClaimPending) {
-      this.dom.bingoClaimBtn.className = 'bingo-claim-btn submitting';
-      this.dom.bingoClaimBtn.disabled = true;
-      this.dom.bingoBtnText.innerHTML = '<span class="spinner"></span> Verifying BINGO...';
-      return;
-    }
-
-    if (this.winnerId) {
-      if (this.winnerId === this.playerId) {
-        this.dom.bingoClaimBtn.className = 'bingo-claim-btn accepted';
-        this.dom.bingoClaimBtn.disabled = true;
-        this.dom.bingoBtnText.textContent = '🏆 VICTORY! BINGO';
-      } else {
-        this.dom.bingoClaimBtn.className = 'bingo-claim-btn locked';
-        this.dom.bingoClaimBtn.disabled = true;
-        this.dom.bingoBtnText.textContent = 'MATCH FINISHED';
-      }
-      return;
-    }
-
     if (count >= 5) {
       const wasLocked = this.dom.bingoClaimBtn.classList.contains('locked');
-      this.dom.bingoClaimBtn.className = 'bingo-claim-btn ready';
+      this.dom.bingoClaimBtn.className = 'bingo-center-btn ready';
       this.dom.bingoClaimBtn.disabled = false;
-      this.dom.bingoBtnText.textContent = 'CLAIM BINGO! ⚡';
+      this.dom.bingoBtnText.textContent = t('claimBingo');
       if (wasLocked) {
         soundManager.playButtonReady();
-        this.announce('5 lines completed! Claim BINGO button is ready.');
+        this._vibrate([80, 50, 120]);
       }
     } else {
-      this.dom.bingoClaimBtn.className = 'bingo-claim-btn locked';
+      this.dom.bingoClaimBtn.className = 'bingo-center-btn locked';
       this.dom.bingoClaimBtn.disabled = true;
       this.dom.bingoBtnText.textContent = `BINGO (${count}/5)`;
     }
   }
 
   handleClaimPress() {
-    if (this.completedLines.length < 5 || this.isClaimPending || this.status === 'FINISHED') {
-      return;
-    }
-
-    this.isClaimPending = true;
-    this._updateClaimButtonState();
-
-    const claimId = `claim-${this.playerId}-${Date.now()}`;
-    this._send('claim_bingo', { claimId });
-
-    setTimeout(() => {
-      if (this.isClaimPending && !this.winnerId) {
-        this.isClaimPending = false;
-        this._updateClaimButtonState();
-      }
-    }, 5000);
+    if (this.completedLines.length < 5) return;
+    this.dom.bingoClaimBtn.className = 'bingo-center-btn submitting';
+    this.dom.bingoClaimBtn.disabled = true;
+    this.dom.bingoBtnText.textContent = 'VERIFYING...';
+    this._send('claim_bingo', { claimId: `claim-${Date.now()}` });
   }
 
   _handleBingoResult(msg) {
-    this.isClaimPending = false;
+    clearInterval(this.turnTimerInterval);
+    if (this.wakeLock) {
+      try { this.wakeLock.release(); } catch {}
+    }
 
     if (msg.valid) {
-      this.status = 'FINISHED';
-      this.winnerId = msg.winnerId;
-      this._updateClaimButtonState();
+      const isWinner = msg.winnerId === this.playerId;
+      this.dom.resultEmoji.textContent = isWinner ? '🏆' : '👏';
+      this.dom.resultTitle.textContent = isWinner ? t('victory') : t('defeat');
+      this.dom.resultDesc.textContent = isWinner ? t('youWon') : t('friendWon', { name: this.dom.gameOppName.textContent });
 
-      if (msg.winnerId === this.playerId) {
-        soundManager.playVictory();
-        this.confetti.burst(140);
-        this.showToast('🏆 Victory! You claimed BINGO (+150 Coins)', 'success');
-        this.dom.turnBanner.className = 'turn-banner my-turn';
-        this.dom.turnBanner.textContent = '🏆 CHAMPION! You completed 5 lines.';
-      } else {
-        this.showToast('Opponent completed 5 lines and claimed BINGO!', 'error');
-        this.dom.turnBanner.className = 'turn-banner opp-turn';
-        this.dom.turnBanner.textContent = 'Opponent claimed BINGO! Match ended.';
+      if (msg.scores) {
+        const other = this.currentRoom?.players.find(p => p.id !== this.playerId);
+        this.dom.scorePlayer1.textContent = `You: ${msg.scores[this.playerId] || 0}`;
+        this.dom.scorePlayer2.textContent = `${other?.name || 'Friend'}: ${msg.scores[other?.id] || 0}`;
       }
-    } else {
-      this.dom.bingoClaimBtn.classList.add('rejected');
-      setTimeout(() => {
-        this.dom.bingoClaimBtn.classList.remove('rejected');
-        this._updateClaimButtonState();
-      }, 500);
 
-      this.showToast(msg.reason || 'BINGO not verified. You need 5 completed lines.', 'error');
+      if (isWinner) {
+        soundManager.playVictory();
+        this.confetti.burst(120);
+        this._vibrate([100, 50, 100, 50, 200]);
+        this._saveLocalWin();
+      }
+
+      this._showScreen('finished');
+    } else {
+      this.showToast(msg.reason || 'BINGO not verified.', 'error');
+      this._updateClaimButtonState();
     }
   }
 
-  _updateTurnBanner() {
-    if (this.status === 'FINISHED') return;
+  _saveLocalWin() {
+    try {
+      const wins = (Number(localStorage.getItem('bingo_stat_wins')) || 0) + 1;
+      localStorage.setItem('bingo_stat_wins', String(wins));
+    } catch {}
+  }
 
-    if (this.status !== 'IN_PROGRESS') {
-      this.dom.turnBanner.className = 'turn-banner waiting';
-      this.dom.turnBanner.textContent = 'Lock your 5x5 numbers to begin match...';
-      return;
-    }
+  _showStatsToast() {
+    try {
+      const wins = localStorage.getItem('bingo_stat_wins') || '0';
+      this.showToast(`🏆 Total Wins: ${wins}`);
+    } catch {}
+  }
 
-    if (this.currentTurnPlayerId === this.playerId) {
-      this.dom.turnBanner.className = 'turn-banner my-turn';
-      this.dom.turnBanner.textContent = 'Your Turn: Call an uncalled number!';
+  _showFloatingReaction(playerId, emoji) {
+    const floater = document.createElement('div');
+    floater.className = 'floating-reaction';
+    floater.textContent = emoji;
+    floater.style.left = `${Math.random() * 50 + 25}%`;
+    floater.style.top = '65%';
+    document.body.appendChild(floater);
+    setTimeout(() => floater.remove(), 1800);
+  }
+
+  shareRoomLink() {
+    if (!this.currentRoom) return;
+    const url = `${window.location.origin}/r/${this.currentRoom.code}`;
+    const text = `Join my Bingo game! Tap to play: ${url}`;
+
+    if (navigator.share) {
+      navigator.share({ title: 'Bingo', text, url }).catch(() => {});
     } else {
-      this.dom.turnBanner.className = 'turn-banner opp-turn';
-      this.dom.turnBanner.textContent = "Opponent's Turn: Waiting for call...";
+      // WhatsApp fallback
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  }
+
+  copyRoomLink() {
+    if (!this.currentRoom) return;
+    const url = `${window.location.origin}/r/${this.currentRoom.code}`;
+    navigator.clipboard?.writeText(url);
+    this.showToast(t('linkCopied'));
+  }
+
+  copyRoomCode() {
+    if (!this.currentRoom) return;
+    navigator.clipboard?.writeText(this.currentRoom.code);
+    this.showToast(t('codeCopied'));
+  }
+
+  showQRCodeModal() {
+    if (!this.currentRoom) return;
+    const url = `${window.location.origin}/r/${this.currentRoom.code}`;
+    this.dom.qrContainer.innerHTML = '';
+    const svg = generateQRCodeSVG(url, 210);
+    this.dom.qrContainer.appendChild(svg);
+    this.dom.modalQr.classList.remove('hidden');
+  }
+
+  shareResultCard() {
+    const text = `I just played Bingo! Room: ${this.currentRoom?.code || ''}. Play on: ${window.location.origin}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Bingo Game Result', text }).catch(() => {});
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     }
   }
 
@@ -783,16 +1017,10 @@ class BingoClient {
     toast.className = `toast ${type === 'error' ? 'toast-error' : (type === 'success' ? 'toast-success' : '')}`;
     toast.textContent = message;
     this.dom.toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 3200);
-  }
-
-  announce(text) {
-    if (this.dom.announcer) {
-      this.dom.announcer.textContent = text;
-    }
+    setTimeout(() => toast.remove(), 3000);
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  window.bingoClient = new BingoClient();
+  window.bingoApp = new BingoApp();
 });

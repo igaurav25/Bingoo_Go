@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="og-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B1B5E"/>
+      <stop offset="100%" stop-color="#4B2F9E"/>
+    </linearGradient>
+    <radialGradient id="og-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6E78FF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#1B1B5E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#og-bg)"/>
+  <circle cx="600" cy="315" r="450" fill="url(#og-glow)"/>
+  
+  <!-- Notebook Card -->
+  <rect x="420" y="90" width="360" height="450" rx="24" fill="#F6F8FF" filter="drop-shadow(0 20px 30px rgba(0,0,0,0.5))"/>
+  <line x1="420" y1="180" x2="780" y2="180" stroke="#CBD5F5" stroke-width="2"/>
+  <line x1="420" y1="270" x2="780" y2="270" stroke="#CBD5F5" stroke-width="2"/>
+  <line x1="420" y1="360" x2="780" y2="360" stroke="#CBD5F5" stroke-width="2"/>
+  <line x1="420" y1="450" x2="780" y2="450" stroke="#CBD5F5" stroke-width="2"/>
+  
+  <!-- Red Pen Slanted Stroke -->
+  <line x1="390" y1="420" x2="810" y2="210" stroke="#E0243F" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- Text -->
+  <text x="600" y="340" font-family="'Kalam', cursive, sans-serif" font-size="140" font-weight="bold" fill="#1D2459" text-anchor="middle">BINGO</text>
+  <text x="600" y="590" font-family="'Baloo 2', sans-serif" font-size="34" font-weight="bold" fill="#FFC83D" text-anchor="middle">PLAY TOGETHER ON TWO PHONES</text>
+</svg>
