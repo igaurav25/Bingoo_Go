@@ -7,7 +7,7 @@
  * and instant hydration for reconnects/resumes.
  */
 
-import { lineGeometry, BINGO_LETTERS } from '/shared/lineModel.js';
+import { lineGeometry, BINGO_LETTERS, calculateLetterStrokeGeometry } from '/shared/lineModel.js';
 import { soundManager } from './audio.js';
 
 // SVG Namespace
@@ -39,6 +39,35 @@ export class RenderOverlay {
     }
 
     this._ensureGradients();
+
+    // Measure strokes from real glyph bounds after fonts load, and recompute on resize
+    if (typeof document !== 'undefined' && document.fonts) {
+      document.fonts.ready.then(() => this.recomputeGlyphBounds());
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => this.recomputeGlyphBounds());
+      setTimeout(() => this.recomputeGlyphBounds(), 100);
+    }
+  }
+
+  /**
+   * Measures real glyph bounds of BINGO letters and calculates stroke geometry with 10% overshoot.
+   */
+  recomputeGlyphBounds() {
+    [this.playerWordContainer, this.opponentWordContainer].forEach(container => {
+      if (!container) return;
+      Array.from(container.children).forEach(letterEl => {
+        const rect = letterEl.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          const geom = calculateLetterStrokeGeometry(rect, 0.10);
+          const strikeLine = letterEl.querySelector('.letter-strike-line');
+          if (strikeLine) {
+            strikeLine.style.setProperty('--stroke-length', `${Math.round(geom.length)}px`);
+            strikeLine.style.setProperty('--stroke-angle', `${geom.angleDeg.toFixed(1)}deg`);
+          }
+        }
+      });
+    });
   }
 
   _ensureGradients() {
@@ -131,7 +160,7 @@ export class RenderOverlay {
     letterEl.classList.add('struck', 'instant');
     const strikeLine = letterEl.querySelector('.letter-strike-line');
     if (strikeLine) {
-      strikeLine.style.transform = 'scaleX(1)';
+      strikeLine.style.transform = 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1)';
     }
   }
 
@@ -225,9 +254,9 @@ export class RenderOverlay {
     if (strikeLine && duration > 0) {
       const anim = strikeLine.animate(
         [
-          { transform: 'scaleX(0)' },
-          { transform: 'scaleX(1.15)' },
-          { transform: 'scaleX(1)' }
+          { transform: 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(0)' },
+          { transform: 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1.10)' },
+          { transform: 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1)' }
         ],
         {
           duration,
@@ -237,7 +266,7 @@ export class RenderOverlay {
       );
       await anim.finished;
     } else if (strikeLine) {
-      strikeLine.style.transform = 'scaleX(1)';
+      strikeLine.style.transform = 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1)';
     }
 
     // Dim to 45% with small pop

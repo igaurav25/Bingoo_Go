@@ -6,6 +6,13 @@
  * letter mapping (B-I-N-G-O), and mathematical stroke geometry.
  */
 
+// Feature flags configuration for additive backward-compatibility
+export const FEATURE_FLAGS = Object.freeze({
+  ANIMATED_LINE_CUTS: true,
+  AUTHORITATIVE_CLAIM_FLOW: true,
+  ENABLE_DIAGONALS: false
+});
+
 // Grid dimension
 export const GRID_SIZE = 5;
 export const TOTAL_CELLS = 25;
@@ -260,4 +267,32 @@ export function lineGeometry(lineId, s = 100) {
   }
 
   throw new Error(`Unknown line id: ${lineId}`);
+}
+
+/**
+ * Calculates stroke geometry for a slanted letter strike (bottom-left to top-right)
+ * from real measured glyph bounds with an overshoot factor (default 10%).
+ * 
+ * @param {{ width: number, height: number }} bounds - layout rect or getBBox
+ * @param {number} [overshoot=0.10]
+ * @returns {{ x1: number, y1: number, x2: number, y2: number, length: number, angleDeg: number }}
+ */
+export function calculateLetterStrokeGeometry(bounds, overshoot = 0.10) {
+  const w = bounds.width || 36;
+  const h = bounds.height || 38;
+
+  const dx = w * (1 + 2 * overshoot);
+  const dy = h * (1 + 2 * overshoot);
+
+  const length = Math.hypot(dx, dy);
+  const angleDeg = -Math.abs((Math.atan2(dy, dx) * 180) / Math.PI);
+
+  return {
+    x1: -overshoot * w,
+    y1: h + overshoot * h,
+    x2: w + overshoot * w,
+    y2: -overshoot * h,
+    length,
+    angleDeg
+  };
 }

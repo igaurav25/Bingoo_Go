@@ -11,7 +11,9 @@ import {
   getLineDefinitions,
   findCompletedLines,
   diffNewLines,
-  lineGeometry
+  lineGeometry,
+  calculateLetterStrokeGeometry,
+  FEATURE_FLAGS
 } from '../shared/lineModel.js';
 
 test('Grid Arrangement Validation & Generation', () => {
@@ -213,4 +215,19 @@ test('Geometry Spec Verification', () => {
       assert.ok(distToNeighborRight > 70, 'Centerline too close to neighbor right');
     }
   }
+});
+
+test('Feature Flags and Letter Stroke Geometry', () => {
+  assert.equal(FEATURE_FLAGS.ANIMATED_LINE_CUTS, true);
+  assert.equal(FEATURE_FLAGS.AUTHORITATIVE_CLAIM_FLOW, true);
+  assert.equal(FEATURE_FLAGS.ENABLE_DIAGONALS, false);
+
+  const rect = { width: 40, height: 40 };
+  const geom = calculateLetterStrokeGeometry(rect, 0.10);
+  assert.ok(geom.length > 50);
+  // Slanted upwards to right has negative angle in canvas/screen coordinates
+  assert.ok(geom.angleDeg < 0 && geom.angleDeg > -90);
+  // 10% overshoot checks
+  assert.equal(geom.x1, -4);
+  assert.equal(geom.x2, 44);
 });

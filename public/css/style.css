@@ -195,12 +195,12 @@ body {
 .letter-strike-line {
   position: absolute;
   top: 50%;
-  left: -10%;
-  width: 120%;
+  left: 50%;
+  width: var(--stroke-length, 120%);
   height: 4px;
   background: var(--stroke-ink);
   border-radius: 2px;
-  transform: rotate(-32deg) scaleX(0);
+  transform: translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(0);
   transform-origin: center;
   pointer-events: none;
   box-shadow: 0 0 3px var(--stroke-ink-glow);
@@ -215,7 +215,7 @@ body {
 }
 
 .bingo-letter.struck .letter-strike-line {
-  transform: rotate(-32deg) scaleX(1);
+  transform: translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1);
 }
 
 .bingo-letter.striking {
