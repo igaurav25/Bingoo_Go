@@ -3,105 +3,227 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Classic Notebook Bingo</title>
+  <title>BINGO - Play. Compete. Win.</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <main class="notebook-page">
-    <!-- Header -->
-    <header class="game-header">
-      <div class="header-title-group">
-        <h1>Bingo Notebook</h1>
-        <span id="room-display" class="room-badge">Room: match-1</span>
+  <!-- Canvas for celebration confetti & gold coins -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <main class="app-container">
+    <!-- Top Navigation & Wallet Bar -->
+    <header class="top-navbar glass-panel">
+      <div class="brand-title">
+        <span>⚡ BINGO</span>
       </div>
-      <div class="header-actions">
-        <button id="mute-btn" class="icon-btn" aria-label="Toggle Sound">
-          <span id="mute-icon">🔊</span> Sound
+      <div class="nav-actions">
+        <button id="wallet-btn" class="wallet-badge" aria-label="View Coin Balance">
+          <span>🪙</span> <span id="coin-balance-display">500</span>
         </button>
-        <button id="reconnect-btn" class="icon-btn" aria-label="Refresh State">
-          <span>🔄</span> Sync
+        <button id="mute-btn" class="icon-btn" aria-label="Toggle Audio">
+          <span id="mute-icon">🔊</span>
+        </button>
+        <button id="reconnect-btn" class="icon-btn" aria-label="Sync State">
+          <span>🔄</span>
         </button>
       </div>
     </header>
 
-    <!-- Turn Banner -->
-    <section id="turn-banner" class="turn-banner waiting" aria-live="polite">
-      Waiting for game to start...
+    <!-- Game Mode Tabs -->
+    <nav class="mode-tabs">
+      <button class="tab-btn active" data-tab="arena">⚔️ 1v1 Arena</button>
+      <button class="tab-btn" data-tab="room">🔒 Private Room</button>
+      <button class="tab-btn" data-tab="tournament">🏆 Tournaments</button>
+    </nav>
+
+    <!-- VIEW 1: 1v1 ARENA VIEW -->
+    <section id="arena-view" class="view-panel">
+      <!-- Turn / Status Banner -->
+      <div id="turn-banner" class="turn-banner waiting glass-panel" aria-live="polite">
+        Waiting for match to start...
+      </div>
+
+      <!-- BINGO Words Progress -->
+      <section class="bingo-words-panel" aria-label="Bingo Word Strikes">
+        <!-- Opponent Progress -->
+        <div class="bingo-word-row opponent-row">
+          <span class="bingo-label" id="opponent-name-label">Opponent</span>
+          <div class="bingo-letters" id="opponent-bingo-word">
+            <div class="bingo-letter" data-letter="B"><span class="letter-glyph">B</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="I"><span class="letter-glyph">I</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="N"><span class="letter-glyph">N</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="G"><span class="letter-glyph">G</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="O"><span class="letter-glyph">O</span><span class="letter-strike-line"></span></div>
+          </div>
+        </div>
+
+        <!-- Local Player Progress -->
+        <div class="bingo-word-row">
+          <span class="bingo-label" id="player-name-label">You</span>
+          <div class="bingo-letters" id="player-bingo-word">
+            <div class="bingo-letter" data-letter="B"><span class="letter-glyph">B</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="I"><span class="letter-glyph">I</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="N"><span class="letter-glyph">N</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="G"><span class="letter-glyph">G</span><span class="letter-strike-line"></span></div>
+            <div class="bingo-letter" data-letter="O"><span class="letter-glyph">O</span><span class="letter-strike-line"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Central BINGO Action Button -->
+      <section class="center-action-hub">
+        <button 
+          id="bingo-claim-btn" 
+          class="bingo-claim-btn locked" 
+          disabled 
+          aria-label="Claim Bingo Victory"
+        >
+          <span id="bingo-btn-text">BINGO (0/5)</span>
+        </button>
+      </section>
+
+      <!-- 5x5 Board Container with Continuous SVG Line Strike Overlay -->
+      <section class="board-container" id="board-container" aria-label="Bingo Grid">
+        <div class="grid-board" id="grid-board" role="grid">
+          <!-- 25 Cells generated dynamically -->
+        </div>
+        <!-- Continuous Slanted Pen Stroke Overlay -->
+        <svg 
+          id="line-strike-overlay" 
+          class="line-strike-overlay" 
+          viewBox="-30 -30 560 560" 
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="pen-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00f0ff" />
+              <stop offset="100%" stop-color="#7928ca" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </section>
+
+      <!-- Setup & Arrangement Panel -->
+      <section id="setup-panel" class="setup-panel glass-panel">
+        <p id="setup-status">Arrange numbers 1-25 manually or use Quick Shuffle:</p>
+        <div class="setup-btn-group">
+          <button id="shuffle-btn" class="btn-secondary">🎲 Quick Shuffle</button>
+          <button id="clear-grid-btn" class="btn-secondary">🗑️ Clear</button>
+          <button id="lock-arrangement-btn" class="btn-primary">🔒 Lock & Ready</button>
+        </div>
+      </section>
     </section>
 
-    <!-- BINGO Words Panel -->
-    <section class="bingo-words-panel" aria-label="Bingo Word Progress">
-      <!-- Opponent BINGO Progress -->
-      <div class="bingo-word-row opponent-row">
-        <span class="bingo-label" id="opponent-name-label">Opponent</span>
-        <div class="bingo-letters" id="opponent-bingo-word">
-          <div class="bingo-letter" data-letter="B">B<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="I">I<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="N">N<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="G">G<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="O">O<span class="letter-strike-line"></span></div>
+    <!-- VIEW 2: PRIVATE ROOM VIEW -->
+    <section id="room-view" class="view-panel hidden">
+      <div class="room-box glass-panel">
+        <h2 class="section-heading">🔒 Private Room System</h2>
+        
+        <!-- Create Room -->
+        <div style="display:flex; gap:10px;">
+          <button id="create-room-btn" class="btn-primary" style="flex:1;">➕ Create New Room</button>
+        </div>
+
+        <div style="text-align:center; color:var(--text-muted); font-size:0.85rem;">— OR JOIN WITH CODE —</div>
+
+        <!-- Join Room -->
+        <div class="input-row">
+          <input type="text" id="join-room-code-input" class="text-input" placeholder="ENTER 6-CHAR CODE" maxlength="8">
+          <button id="join-room-btn" class="btn-secondary">Join</button>
+        </div>
+
+        <!-- Room Lobby Display -->
+        <div id="room-lobby-section" style="display:none; flex-direction:column; gap:10px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:800; font-size:1.1rem; color:var(--gold-yellow);">
+              Room Code: <span id="lobby-code-display" style="letter-spacing:1px; color:#ffffff;"></span>
+            </span>
+            <button id="copy-room-code-btn" class="icon-btn" style="font-size:0.8rem;">📋 Copy</button>
+          </div>
+
+          <div class="lobby-players-list" id="lobby-players-list">
+            <!-- Player items populated dynamically -->
+          </div>
+
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <button id="add-bot-btn" class="btn-secondary">🤖 Add AI Bot</button>
+            <button id="start-room-match-btn" class="btn-primary">▶️ Start Match</button>
+          </div>
         </div>
       </div>
+    </section>
 
-      <!-- Player BINGO Progress -->
-      <div class="bingo-word-row">
-        <span class="bingo-label" id="player-name-label">You</span>
-        <div class="bingo-letters" id="player-bingo-word">
-          <div class="bingo-letter" data-letter="B">B<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="I">I<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="N">N<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="G">G<span class="letter-strike-line"></span></div>
-          <div class="bingo-letter" data-letter="O">O<span class="letter-strike-line"></span></div>
+    <!-- VIEW 3: TOURNAMENT VIEW -->
+    <section id="tournament-view" class="view-panel hidden">
+      <div class="tourn-box glass-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 class="section-heading">🏆 Tournament Arena</h2>
+          <div style="display:flex; gap:6px;">
+            <button id="tourn-tab-ko" class="btn-secondary" style="font-size:0.8rem; padding:6px 10px;">Knockout</button>
+            <button id="tourn-tab-league" class="btn-secondary" style="font-size:0.8rem; padding:6px 10px;">League</button>
+          </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Central BINGO Claim Button -->
-    <section class="center-action-hub">
-      <button 
-        id="bingo-claim-btn" 
-        class="bingo-claim-btn locked" 
-        disabled 
-        aria-label="Claim Bingo Victory"
-      >
-        <span id="bingo-btn-text">BINGO (0/5)</span>
-      </button>
-    </section>
+        <div style="display:flex; gap:8px;">
+          <button id="start-knockout-btn" class="btn-primary">⚡ Start Knockout (4 Players)</button>
+          <button id="start-league-btn" class="btn-secondary">📊 Start League (6 Matches)</button>
+        </div>
 
-    <!-- 5x5 Board with SVG Line Strike Overlay -->
-    <section class="board-container" id="board-container" aria-label="Bingo Grid">
-      <div class="grid-board" id="grid-board" role="grid">
-        <!-- 25 Cells generated dynamically -->
-      </div>
-      <!-- Continuous Slanted Line Strike Overlay (pointer-events: none) -->
-      <svg 
-        id="line-strike-overlay" 
-        class="line-strike-overlay" 
-        viewBox="-30 -30 560 560" 
-        preserveAspectRatio="xMidYMid meet"
-        aria-hidden="true"
-      >
-        <!-- Gradients and Lines appended dynamically -->
-      </svg>
-    </section>
+        <!-- Knockout Bracket Display -->
+        <div id="knockout-bracket-container" class="bracket-tree" style="margin-top:10px;">
+          <!-- Dynamically populated knockout rounds -->
+        </div>
 
-    <!-- Setup / Arrangement Panel (visible during setup) -->
-    <section id="setup-panel" class="setup-panel">
-      <p id="setup-status">Prepare your 5x5 numbers (1-25) or auto-shuffle:</p>
-      <div class="setup-btn-group">
-        <button id="shuffle-btn" class="btn-secondary">Random Shuffle</button>
-        <button id="lock-arrangement-btn" class="btn-primary">Lock & Ready</button>
+        <!-- League Standings Display -->
+        <div id="league-container" style="display:none; margin-top:10px;">
+          <h3 style="font-size:0.95rem; color:var(--gold-yellow); margin-bottom:8px;">Points Table</h3>
+          <table class="league-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>P</th>
+                <th>W</th>
+                <th>L</th>
+                <th>Pts</th>
+              </tr>
+            </thead>
+            <tbody id="league-points-body">
+              <!-- Points rows -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>
 
-  <!-- Screen reader live notifications -->
+  <!-- Wallet & Transaction History Modal -->
+  <div id="wallet-modal" class="modal-overlay hidden" aria-modal="true" role="dialog">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <h3>🪙 Virtual Coin Wallet</h3>
+        <button id="close-wallet-btn" class="icon-btn">✕</button>
+      </div>
+      <div style="text-align:center; padding:12px; background:rgba(255,209,102,0.1); border-radius:12px; border:1px solid rgba(255,209,102,0.25);">
+        <span style="font-size:0.9rem; color:var(--text-muted);">Current Balance</span>
+        <div style="font-size:2rem; font-weight:900; color:var(--gold-yellow); margin-top:4px;">
+          🪙 <span id="modal-coin-balance">500</span> Coins
+        </div>
+      </div>
+      <div class="history-list" id="wallet-history-list">
+        <!-- Transactions dynamically inserted -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen reader live announcer -->
   <div id="aria-live-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Toast notifications -->
+  <!-- Toast notification container -->
   <div id="toast-container" class="toast-container" aria-live="assertive"></div>
 
-  <!-- Game Client Scripts -->
+  <!-- Game Client Script -->
   <script type="module" src="/js/gameClient.js"></script>
 </body>
 </html>

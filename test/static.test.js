@@ -19,14 +19,14 @@ test('Static Asset Delivery: HTML, CSS, JS, Shared modules', async () => {
     const html = await fetchUrl('/');
     assert.equal(html.status, 200);
     assert.match(html.headers['content-type'], /text\/html/);
-    assert.match(html.body, /Classic Notebook Bingo/);
+    assert.match(html.body, /BINGO/);
     assert.match(html.body, /line-strike-overlay/);
 
     // Verify CSS
     const css = await fetchUrl('/css/style.css');
     assert.equal(css.status, 200);
     assert.match(css.headers['content-type'], /text\/css/);
-    assert.match(css.body, /--paper-bg/);
+    assert.match(css.body, /--bg-dark/);
     assert.match(css.body, /bingo-pen-stroke/);
 
     // Verify client JS
