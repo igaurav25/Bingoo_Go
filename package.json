@@ -1,0 +1,23 @@
+{
+  "name": "bingoo_goo",
+  "version": "1.0.0",
+  "description": "Classic notebook-style Bingo line-cutting system",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "keywords": [
+    "bingo",
+    "multiplayer",
+    "realtime",
+    "game"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
