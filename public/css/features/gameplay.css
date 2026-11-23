@@ -18,17 +18,19 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: clamp(4px, 1.5vh, 10px);
+  gap: clamp(2px, 1vh, 8px);
   overflow: hidden !important;
   width: 100%;
+  padding: 6px 4px calc(var(--safe-bottom) + 6px);
 }
 
 /* 1. TOP MATCH HEADER */
 .gameplay-top-bar {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 6px;
+  padding: 4px 8px;
   background: #FFFFFF;
   border: 1.5px solid var(--card-border);
   border-radius: var(--radius-pill);
@@ -122,6 +124,7 @@
 
 /* 2. TURN STATUS & TIMER STRIP */
 .turn-status-strip {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -165,6 +168,7 @@
 
 /* 3. BINGO LETTERS ROW */
 .bingo-word-row {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
   gap: clamp(6px, 2vw, 12px);
@@ -172,8 +176,8 @@
 }
 
 .bingo-letter-tile {
-  width: clamp(42px, 11vw, 56px);
-  height: clamp(46px, 12vw, 60px);
+  width: clamp(40px, 11vw, 54px);
+  height: clamp(42px, 11vw, 56px);
   background: #FFFFFF;
   border: 2px solid var(--card-border);
   border-radius: var(--radius-md);
@@ -183,7 +187,7 @@
   position: relative;
   box-shadow: var(--shadow-tile);
   font-family: var(--font-display);
-  font-size: clamp(1.4rem, 4vw, 1.8rem);
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
   font-weight: 900;
   color: var(--text-dark);
   user-select: none;
@@ -215,9 +219,15 @@
 
 /* 4. MAIN 5x5 BOARD GAME GRID WITH CONTINUOUS SVG CUT OVERLAY */
 .gameplay-layout .board-game-container {
-  width: min(92vw, calc(100dvh - 300px), 380px);
+  flex: 1;
+  min-height: 0;
+  max-height: min(84vw, calc(100% - 210px), 340px);
   aspect-ratio: 1 / 1;
-  margin: 0 auto;
+  margin: auto;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Marked number cell style: NON-STRIKE INK CIRCLE / TINT (P0 Rule 4) */
@@ -265,6 +275,7 @@
 
 /* 5. CENTRAL BINGO CLAIM BUTTON */
 .bingo-claim-container {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
   width: 100%;
@@ -273,10 +284,10 @@
 .bingo-claim-btn {
   width: 100%;
   max-width: 320px;
-  height: 52px;
+  height: 46px;
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -330,10 +341,11 @@
 
 /* 6. BOTTOM TRAY: RECENT CALLS CHIPS + REACTION EMOTES */
 .gameplay-bottom-tray {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 6px;
+  padding: 3px 6px;
   background: #FFFFFF;
   border: 1.5px solid var(--card-border);
   border-radius: var(--radius-md);

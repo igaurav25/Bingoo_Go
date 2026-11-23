@@ -72,123 +72,125 @@
 
     <!-- ==================== 1. HOME SCREEN ==================== -->
     <section id="screen-home" class="screen-view">
-      <!-- BGMI-Inspired Player Status & XP Bar -->
-      <div class="lobby-player-bar" id="lobby-player-bar">
-        <div class="lobby-avatar-wrap">
-          <div class="lobby-avatar-chip" id="lobby-avatar-chip">🦊</div>
-          <div class="lobby-level-badge" id="lobby-level-badge">Lv. 12</div>
-        </div>
-        <div class="lobby-player-info">
-          <div class="lobby-player-header">
-            <span class="lobby-player-name" id="lobby-player-name">Player</span>
-            <span class="lobby-rank-tier">Diamond III</span>
+      <div class="screen-scrollable">
+        <!-- BGMI-Inspired Player Status & XP Bar -->
+        <div class="lobby-player-bar" id="lobby-player-bar">
+          <div class="lobby-avatar-wrap">
+            <div class="lobby-avatar-chip" id="lobby-avatar-chip">🦊</div>
+            <div class="lobby-level-badge" id="lobby-level-badge">Lv. 12</div>
           </div>
-          <div class="lobby-xp-track" title="XP Progress: 720 / 1000 XP">
-            <div class="lobby-xp-fill" id="lobby-xp-fill" style="width: 72%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Hero Banner -->
-      <div class="home-hero-banner">
-        <div class="hero-content">
-          <div class="hero-subtitle">Classic 5×5 Notebook Battle</div>
-          <h2 class="hero-title">Cut 5 Lines.<br>Claim BINGO!</h2>
-
-          <!-- Interactive mini board tiles preview -->
-          <div class="hero-tiles-row">
-            <div class="hero-tile">7</div>
-            <div class="hero-tile active">14</div>
-            <div class="hero-tile">21</div>
-            <div class="hero-tile active">3</div>
-            <div class="hero-tile">25</div>
-          </div>
-
-          <button id="btn-hero-play" class="btn-tactile btn-gold" style="width:100%; font-size:1.15rem;">
-            <span>⚡</span> PLAY NOW
-          </button>
-        </div>
-      </div>
-
-      <!-- 4 Core Game Options Grid -->
-      <div class="modes-grid">
-        <div class="mode-card quick-match" id="mode-quick-match">
-          <div class="mode-icon-circle">⚡</div>
-          <h3 class="mode-title">Quick Match</h3>
-          <p class="mode-desc">Instant 1v1 online battle</p>
-        </div>
-
-        <div class="mode-card create-room" id="mode-create-room">
-          <div class="mode-icon-circle">➕</div>
-          <h3 class="mode-title">Create Room</h3>
-          <p class="mode-desc">Invite friends with link</p>
-        </div>
-
-        <div class="mode-card join-room" id="mode-join-room">
-          <div class="mode-icon-circle">🔑</div>
-          <h3 class="mode-title">Join Room</h3>
-          <p class="mode-desc">Enter 5-character code</p>
-        </div>
-
-        <div class="mode-card tournament-mode" id="mode-tournament">
-          <div class="mode-icon-circle">🏆</div>
-          <h3 class="mode-title">Tournaments</h3>
-          <p class="mode-desc">Knockout & League cups</p>
-        </div>
-      </div>
-
-      <!-- Browse All 13 Modes Entry CTA -->
-      <button id="btn-browse-all-modes" class="btn-tactile btn-primary" style="width:100%; font-size:1rem; padding:12px;">
-        <span>🎮</span> Browse All 13 Game Modes →
-      </button>
-
-      <!-- Daily Reward Card -->
-      <div class="reward-quest-card" id="card-daily-reward">
-        <div class="reward-info">
-          <div class="reward-gift-box">🎁</div>
-          <div>
-            <div class="reward-title">Daily Coin Gift</div>
-            <div class="reward-sub">Claim 100 free coins every day</div>
-          </div>
-        </div>
-        <button class="btn-tactile btn-primary" id="btn-claim-daily" style="padding:8px 16px; font-size:0.9rem;">
-          Claim
-        </button>
-      </div>
-
-      <!-- Quick Join Box Container (Shown when Join Mode is tapped) -->
-      <div id="home-join-card" class="game-card" style="display:none; text-align:center;">
-        <h3 style="font-family:var(--font-display); font-size:1.1rem; font-weight:800; margin-bottom:6px;">Enter Room Code</h3>
-        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Type the 5-character room code shared by your friend.</p>
-        <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
-          <input type="text" class="code-box-input" maxlength="1" id="code-box-0" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
-          <input type="text" class="code-box-input" maxlength="1" id="code-box-1" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
-          <input type="text" class="code-box-input" maxlength="1" id="code-box-2" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
-          <input type="text" class="code-box-input" maxlength="1" id="code-box-3" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
-          <input type="text" class="code-box-input" maxlength="1" id="code-box-4" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn-tactile btn-secondary" id="btn-cancel-join" style="flex:1;">Cancel</button>
-          <button class="btn-tactile btn-primary" id="btn-join-code" style="flex:1;">Join Game</button>
-        </div>
-      </div>
-
-      <!-- Quick Leaderboard Teaser -->
-      <div class="game-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div style="font-family:var(--font-display); font-weight:800; font-size:0.95rem;">Weekly Champions</div>
-          <button class="text-btn" id="btn-view-all-leaderboard" style="font-size:0.8rem; color:var(--primary-blue); font-weight:700; background:none; border:none; cursor:pointer;">View All →</button>
-        </div>
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--bg-subtle); border-radius:12px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:1.3rem;">🥇</span>
-            <span style="font-size:1.4rem;">⚡</span>
-            <div>
-              <div style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;">Alex_Pro</div>
-              <div style="font-size:0.75rem; color:var(--text-secondary);">142 Victories • 78% Win</div>
+          <div class="lobby-player-info">
+            <div class="lobby-player-header">
+              <span class="lobby-player-name" id="lobby-player-name">Player</span>
+              <span class="lobby-rank-tier">Diamond III</span>
+            </div>
+            <div class="lobby-xp-track" title="XP Progress: 720 / 1000 XP">
+              <div class="lobby-xp-fill" id="lobby-xp-fill" style="width: 72%;"></div>
             </div>
           </div>
-          <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);">8,450 🪙</span>
+        </div>
+
+        <!-- Hero Banner -->
+        <div class="home-hero-banner">
+          <div class="hero-content">
+            <div class="hero-subtitle">Classic 5×5 Notebook Battle</div>
+            <h2 class="hero-title">Cut 5 Lines.<br>Claim BINGO!</h2>
+
+            <!-- Interactive mini board tiles preview -->
+            <div class="hero-tiles-row">
+              <div class="hero-tile">7</div>
+              <div class="hero-tile active">14</div>
+              <div class="hero-tile">21</div>
+              <div class="hero-tile active">3</div>
+              <div class="hero-tile">25</div>
+            </div>
+
+            <button id="btn-hero-play" class="btn-tactile btn-gold" style="width:100%; font-size:1.15rem;">
+              <span>⚡</span> PLAY NOW
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Core Game Options Grid -->
+        <div class="modes-grid">
+          <div class="mode-card quick-match" id="mode-quick-match">
+            <div class="mode-icon-circle">⚡</div>
+            <h3 class="mode-title">Quick Match</h3>
+            <p class="mode-desc">Instant 1v1 online battle</p>
+          </div>
+
+          <div class="mode-card create-room" id="mode-create-room">
+            <div class="mode-icon-circle">➕</div>
+            <h3 class="mode-title">Create Room</h3>
+            <p class="mode-desc">Invite friends with link</p>
+          </div>
+
+          <div class="mode-card join-room" id="mode-join-room">
+            <div class="mode-icon-circle">🔑</div>
+            <h3 class="mode-title">Join Room</h3>
+            <p class="mode-desc">Enter 5-character code</p>
+          </div>
+
+          <div class="mode-card tournament-mode" id="mode-tournament">
+            <div class="mode-icon-circle">🏆</div>
+            <h3 class="mode-title">Tournaments</h3>
+            <p class="mode-desc">Knockout & League cups</p>
+          </div>
+        </div>
+
+        <!-- Browse All 13 Modes Entry CTA -->
+        <button id="btn-browse-all-modes" class="btn-tactile btn-primary" style="width:100%; font-size:1rem; padding:12px;">
+          <span>🎮</span> Browse All 13 Game Modes →
+        </button>
+
+        <!-- Daily Reward Card -->
+        <div class="reward-quest-card" id="card-daily-reward">
+          <div class="reward-info">
+            <div class="reward-gift-box">🎁</div>
+            <div>
+              <div class="reward-title">Daily Coin Gift</div>
+              <div class="reward-sub">Claim 100 free coins every day</div>
+            </div>
+          </div>
+          <button class="btn-tactile btn-primary" id="btn-claim-daily" style="padding:8px 16px; font-size:0.9rem;">
+            Claim
+          </button>
+        </div>
+
+        <!-- Quick Join Box Container (Shown when Join Mode is tapped) -->
+        <div id="home-join-card" class="game-card" style="display:none; text-align:center;">
+          <h3 style="font-family:var(--font-display); font-size:1.1rem; font-weight:800; margin-bottom:6px;">Enter Room Code</h3>
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Type the 5-character room code shared by your friend.</p>
+          <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
+            <input type="text" class="code-box-input" maxlength="1" id="code-box-0" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+            <input type="text" class="code-box-input" maxlength="1" id="code-box-1" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+            <input type="text" class="code-box-input" maxlength="1" id="code-box-2" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+            <input type="text" class="code-box-input" maxlength="1" id="code-box-3" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+            <input type="text" class="code-box-input" maxlength="1" id="code-box-4" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-tactile btn-secondary" id="btn-cancel-join" style="flex:1;">Cancel</button>
+            <button class="btn-tactile btn-primary" id="btn-join-code" style="flex:1;">Join Game</button>
+          </div>
+        </div>
+
+        <!-- Quick Leaderboard Teaser -->
+        <div class="game-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-family:var(--font-display); font-weight:800; font-size:0.95rem;">Weekly Champions</div>
+            <button class="text-btn" id="btn-view-all-leaderboard" style="font-size:0.8rem; color:var(--primary-blue); font-weight:700; background:none; border:none; cursor:pointer;">View All →</button>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--bg-subtle); border-radius:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.3rem;">🥇</span>
+              <span style="font-size:1.4rem;">⚡</span>
+              <div>
+                <div style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;">Alex_Pro</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary);">142 Victories • 78% Win</div>
+              </div>
+            </div>
+            <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);">8,450 🪙</span>
+          </div>
         </div>
       </div>
     </section>
@@ -202,12 +204,13 @@
         <span class="page-header-badge">13 Playable Modes</span>
       </div>
 
-      <div class="modes-hub-header">
-        <h2 class="modes-hub-title">Game Modes</h2>
-        <p class="modes-hub-subtitle">Choose your battle format across 13 dedicated gameplay modes</p>
-      </div>
+      <div class="screen-scrollable">
+        <div class="modes-hub-header">
+          <h2 class="modes-hub-title">Game Modes</h2>
+          <p class="modes-hub-subtitle">Choose your battle format across 13 dedicated gameplay modes</p>
+        </div>
 
-      <div class="all-modes-grid" id="all-modes-grid-container">
+        <div class="all-modes-grid" id="all-modes-grid-container">
         <!-- Mode 1: Quick Match -->
         <div class="game-mode-card" data-mode-target="quick-match">
           <div class="mode-card-top">
@@ -389,6 +392,7 @@
           </div>
           <button class="btn-tactile btn-primary btn-sm" style="width:100%;">Host Hybrid →</button>
         </div>
+      </div>
       </div>
     </section>
 
@@ -804,12 +808,12 @@
 
     <!-- ==================== 3. NUMBER ARRANGEMENT SCREEN ==================== -->
     <section id="screen-arrange" class="screen-view hidden">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="arrange-header-bar">
         <div>
-          <h2 style="font-family:var(--font-display); font-size:1.35rem; font-weight:800;">Arrange Your Board</h2>
-          <p style="font-size:0.85rem; color:var(--text-secondary);">Tap one number, then another, to swap them.</p>
+          <h2 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800; margin:0;">Arrange Your Board</h2>
+          <p style="font-size:0.75rem; color:var(--text-secondary); margin:0;">Tap two numbers to swap positions</p>
         </div>
-        <span class="seat-status-pill waiting" id="friend-arrange-badge">Friend arranging...</span>
+        <span class="seat-status-pill waiting" id="friend-arrange-badge">Opponent arranging...</span>
       </div>
 
       <!-- 5x5 Grid for Arrangement -->
@@ -819,19 +823,20 @@
         </div>
       </div>
 
-      <!-- Shuffle & Reset Buttons -->
-      <div style="display:flex; gap:8px;">
-        <button id="btn-auto-arrange" class="btn-tactile btn-secondary" style="flex:1;">
-          <span>🎲</span> Shuffle
-        </button>
-        <button id="btn-reset-arrange" class="btn-tactile btn-secondary" style="flex:1;">
-          <span>↺</span> Reset
+      <!-- Shuffle, Reset & Confirm Buttons -->
+      <div class="arrange-actions-tray">
+        <div style="display:flex; gap:8px;">
+          <button id="btn-auto-arrange" class="btn-tactile btn-secondary" style="flex:1; height:42px;">
+            <span>🎲</span> Shuffle
+          </button>
+          <button id="btn-reset-arrange" class="btn-tactile btn-secondary" style="flex:1; height:42px;">
+            <span>↺</span> Reset
+          </button>
+        </div>
+        <button id="btn-lock-board" class="btn-tactile btn-primary" style="width:100%; height:48px; font-size:1.1rem;">
+          <span>🔒</span> Confirm & Lock Board
         </button>
       </div>
-
-      <button id="btn-lock-board" class="btn-tactile btn-primary" style="width:100%; font-size:1.15rem;">
-        <span>🔒</span> Confirm & Lock Board
-      </button>
     </section>
 
     <!-- ==================== 4. MAIN GAMEPLAY SCREEN (Strict NO-SCROLL) ==================== -->
@@ -923,148 +928,154 @@
 
     <!-- ==================== 5. TOURNAMENT SCREENS ==================== -->
     <section id="screen-tournaments" class="screen-view hidden">
-      <div class="tourn-tabs-bar">
+      <div class="tourn-tabs-bar" style="flex-shrink:0;">
         <button class="tourn-tab active" id="tab-tourn-knockout">🥊 Knockout Bracket</button>
         <button class="tourn-tab" id="tab-tourn-league">📋 League Table</button>
       </div>
 
-      <!-- Knockout View -->
-      <div id="tourn-knockout-view">
-        <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #FFC857, #FFA927); color:var(--text-dark);">
-          <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Cobalt Cup Knockout</div>
-          <div style="font-size:0.85rem; font-weight:700;">8 Players • Winner takes 2,500 🪙 • Single Elimination</div>
+      <div class="screen-scrollable">
+        <!-- Knockout View -->
+        <div id="tourn-knockout-view">
+          <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #FFC857, #FFA927); color:var(--text-dark);">
+            <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Cobalt Cup Knockout</div>
+            <div style="font-size:0.85rem; font-weight:700;">8 Players • Winner takes 2,500 🪙 • Single Elimination</div>
+          </div>
+
+          <!-- Interactive Knockout Bracket Rounds -->
+          <div class="bracket-rounds-wrapper" id="knockout-bracket-container">
+            <!-- Bracket cards dynamically injected -->
+          </div>
+
+          <button class="btn-tactile btn-primary" id="btn-enter-knockout" style="width:100%; margin-top:8px;">
+            <span>🏆</span> Enter Tournament (100 🪙)
+          </button>
         </div>
 
-        <!-- Interactive Knockout Bracket Rounds -->
-        <div class="bracket-rounds-wrapper" id="knockout-bracket-container">
-          <!-- Bracket cards dynamically injected -->
-        </div>
+        <!-- League View -->
+        <div id="tourn-league-view" style="display:none;">
+          <div class="game-card" style="margin-bottom:12px; background:var(--primary-blue); color:#FFFFFF;">
+            <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Premier Bingo League</div>
+            <div style="font-size:0.85rem; opacity:0.9;">Season 1 • 8 Contenders • Top 3 Win Big</div>
+          </div>
 
-        <button class="btn-tactile btn-primary" id="btn-enter-knockout" style="width:100%; margin-top:8px;">
-          <span>🏆</span> Enter Tournament (100 🪙)
-        </button>
-      </div>
-
-      <!-- League View -->
-      <div id="tourn-league-view" style="display:none;">
-        <div class="game-card" style="margin-bottom:12px; background:var(--primary-blue); color:#FFFFFF;">
-          <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Premier Bingo League</div>
-          <div style="font-size:0.85rem; opacity:0.9;">Season 1 • 8 Contenders • Top 3 Win Big</div>
-        </div>
-
-        <div class="league-table-card">
-          <table class="league-table" id="league-table-body">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Player</th>
-                <th>MP</th>
-                <th>W</th>
-                <th>L</th>
-                <th>PTS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Dynamic Rows -->
-            </tbody>
-          </table>
+          <div class="league-table-card">
+            <table class="league-table" id="league-table-body">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Player</th>
+                  <th>MP</th>
+                  <th>W</th>
+                  <th>L</th>
+                  <th>PTS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Dynamic Rows -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- ==================== 6. LEADERBOARD SCREEN ==================== -->
     <section id="screen-leaderboard" class="screen-view hidden">
-      <div class="tourn-tabs-bar">
+      <div class="tourn-tabs-bar" style="flex-shrink:0;">
         <button class="tourn-tab active" id="tab-lead-global">🌐 Global</button>
         <button class="tourn-tab" id="tab-lead-friends">👥 Friends</button>
         <button class="tourn-tab" id="tab-lead-weekly">📅 Weekly</button>
       </div>
 
-      <!-- Top 3 Podium Visual -->
-      <div class="podium-container" id="podium-display">
-        <!-- Step 2: Silver -->
-        <div class="podium-step silver" id="podium-silver">
-          <div class="podium-avatar" id="silver-avatar">🦊</div>
-          <div class="podium-name" id="silver-name">Rohit</div>
-          <div class="podium-badge silver">2nd • 6,920 🪙</div>
-        </div>
+      <div class="screen-scrollable">
+        <!-- Top 3 Podium Visual -->
+        <div class="podium-container" id="podium-display">
+          <!-- Step 2: Silver -->
+          <div class="podium-step silver" id="podium-silver">
+            <div class="podium-avatar" id="silver-avatar">🦊</div>
+            <div class="podium-name" id="silver-name">Rohit</div>
+            <div class="podium-badge silver">2nd • 6,920 🪙</div>
+          </div>
 
-        <!-- Step 1: Gold -->
-        <div class="podium-step gold" id="podium-gold">
-          <div style="font-size:1.5rem; line-height:1; margin-bottom:2px;">👑</div>
-          <div class="podium-avatar" id="gold-avatar">⚡</div>
-          <div class="podium-name" id="gold-name">Alex_Pro</div>
-          <div class="podium-badge gold">1st • 8,450 🪙</div>
-        </div>
+          <!-- Step 1: Gold -->
+          <div class="podium-step gold" id="podium-gold">
+            <div style="font-size:1.5rem; line-height:1; margin-bottom:2px;">👑</div>
+            <div class="podium-avatar" id="gold-avatar">⚡</div>
+            <div class="podium-name" id="gold-name">Alex_Pro</div>
+            <div class="podium-badge gold">1st • 8,450 🪙</div>
+          </div>
 
-        <!-- Step 3: Bronze -->
-        <div class="podium-step bronze" id="podium-bronze">
-          <div class="podium-avatar" id="bronze-avatar">⭐</div>
-          <div class="podium-name" id="bronze-name">LuckyStar</div>
-          <div class="podium-badge bronze">3rd • 5,800 🪙</div>
-        </div>
-      </div>
-
-      <!-- Rankings List #4..#10 -->
-      <div class="rank-list-card" id="rank-list-items">
-        <!-- Injected dynamically -->
-      </div>
-
-      <!-- Sticky User Rank Bar -->
-      <div class="game-card" style="margin-top:4px; display:flex; justify-content:space-between; align-items:center; background:var(--primary-blue-light); border-color:rgba(49,87,213,0.3);">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-family:var(--font-display); font-weight:800; font-size:1.1rem; color:var(--primary-blue);">#14</span>
-          <div>
-            <div style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;" id="user-rank-name">You</div>
-            <div style="font-size:0.75rem; color:var(--text-secondary);">28 Wins • 68% Win Rate</div>
+          <!-- Step 3: Bronze -->
+          <div class="podium-step bronze" id="podium-bronze">
+            <div class="podium-avatar" id="bronze-avatar">⭐</div>
+            <div class="podium-name" id="bronze-name">LuckyStar</div>
+            <div class="podium-badge bronze">3rd • 5,800 🪙</div>
           </div>
         </div>
-        <span style="font-family:var(--font-display); font-weight:800; color:var(--primary-blue);" id="user-rank-coins">500 🪙</span>
+
+        <!-- Rankings List #4..#10 -->
+        <div class="rank-list-card" id="rank-list-items">
+          <!-- Injected dynamically -->
+        </div>
+
+        <!-- Sticky User Rank Bar -->
+        <div class="game-card" style="margin-top:4px; display:flex; justify-content:space-between; align-items:center; background:var(--primary-blue-light); border-color:rgba(49,87,213,0.3);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-family:var(--font-display); font-weight:800; font-size:1.1rem; color:var(--primary-blue);">#14</span>
+            <div>
+              <div style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;" id="user-rank-name">You</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);">28 Wins • 68% Win Rate</div>
+            </div>
+          </div>
+          <span style="font-family:var(--font-display); font-weight:800; color:var(--primary-blue);" id="user-rank-coins">500 🪙</span>
+        </div>
       </div>
     </section>
 
     <!-- ==================== 7. PROFILE & STATISTICS SCREEN ==================== -->
     <section id="screen-profile" class="screen-view hidden">
-      <!-- Player Header Card -->
-      <div class="profile-card-hero">
-        <div class="profile-avatar-big" id="profile-page-avatar">🦊</div>
-        <div style="flex:1;">
-          <h2 class="profile-name-text" id="profile-page-name">Player</h2>
-          <div class="profile-id-sub" id="profile-page-id">ID: #BGO-7829</div>
-          <button class="btn-tactile btn-secondary" id="btn-edit-profile-open" style="padding:4px 12px; font-size:0.8rem; margin-top:8px;">
-            ✏️ Edit Profile
-          </button>
+      <div class="screen-scrollable">
+        <!-- Player Header Card -->
+        <div class="profile-card-hero">
+          <div class="profile-avatar-big" id="profile-page-avatar">🦊</div>
+          <div style="flex:1;">
+            <h2 class="profile-name-text" id="profile-page-name">Player</h2>
+            <div class="profile-id-sub" id="profile-page-id">ID: #BGO-7829</div>
+            <button class="btn-tactile btn-secondary" id="btn-edit-profile-open" style="padding:4px 12px; font-size:0.8rem; margin-top:8px;">
+              ✏️ Edit Profile
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- 2x2 Statistics Grid -->
-      <div class="stats-grid-2x2">
-        <div class="stat-metric-card">
-          <span class="stat-metric-label">Total Matches</span>
-          <span class="stat-metric-val" id="stat-total-matches">42</span>
+        <!-- 2x2 Statistics Grid -->
+        <div class="stats-grid-2x2">
+          <div class="stat-metric-card">
+            <span class="stat-metric-label">Total Matches</span>
+            <span class="stat-metric-val" id="stat-total-matches">42</span>
+          </div>
+          <div class="stat-metric-card">
+            <span class="stat-metric-label">Total Victories</span>
+            <span class="stat-metric-val" id="stat-total-wins">28</span>
+          </div>
+          <div class="stat-metric-card">
+            <span class="stat-metric-label">Win Percentage</span>
+            <span class="stat-metric-val" id="stat-win-rate">68%</span>
+          </div>
+          <div class="stat-metric-card">
+            <span class="stat-metric-label">Win Streak</span>
+            <span class="stat-metric-val" id="stat-win-streak">🔥 3</span>
+          </div>
         </div>
-        <div class="stat-metric-card">
-          <span class="stat-metric-label">Total Victories</span>
-          <span class="stat-metric-val" id="stat-total-wins">28</span>
-        </div>
-        <div class="stat-metric-card">
-          <span class="stat-metric-label">Win Percentage</span>
-          <span class="stat-metric-val" id="stat-win-rate">68%</span>
-        </div>
-        <div class="stat-metric-card">
-          <span class="stat-metric-label">Win Streak</span>
-          <span class="stat-metric-val" id="stat-win-streak">🔥 3</span>
-        </div>
-      </div>
 
-      <!-- Coin Wallet & History Card -->
-      <div class="game-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;">Coin Transaction History</div>
-          <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);" id="profile-coin-balance">500 🪙</span>
-        </div>
-        <div id="coin-history-list" style="display:flex; flex-direction:column; gap:8px;">
-          <!-- Dynamically populated transaction history -->
+        <!-- Coin Wallet & History Card -->
+        <div class="game-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;">Coin Transaction History</div>
+            <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);" id="profile-coin-balance">500 🪙</span>
+          </div>
+          <div id="coin-history-list" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Dynamically populated transaction history -->
+          </div>
         </div>
       </div>
     </section>
@@ -1092,31 +1103,31 @@
         </div>
       </div>
     </section>
-  </main>
 
-  <!-- ==================== BOTTOM NAVIGATION DOCK (Section 14) ==================== -->
-  <nav class="bottom-nav" id="main-bottom-nav">
-    <button class="nav-item active" id="nav-home" data-tab="home">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">Home</span>
-    </button>
-    <button class="nav-item" id="nav-play" data-tab="lobby">
-      <span class="nav-icon">🎮</span>
-      <span class="nav-label">Play</span>
-    </button>
-    <button class="nav-item" id="nav-tournaments" data-tab="tournaments">
-      <span class="nav-icon">🏆</span>
-      <span class="nav-label">Tournaments</span>
-    </button>
-    <button class="nav-item" id="nav-leaderboard" data-tab="leaderboard">
-      <span class="nav-icon">🏅</span>
-      <span class="nav-label">Leaderboard</span>
-    </button>
-    <button class="nav-item" id="nav-profile" data-tab="profile">
-      <span class="nav-icon">👤</span>
-      <span class="nav-label">Profile</span>
-    </button>
-  </nav>
+    <!-- ==================== BOTTOM NAVIGATION DOCK (Section 14) ==================== -->
+    <nav class="bottom-nav" id="main-bottom-nav">
+      <button class="nav-item active" id="nav-home" data-tab="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" id="nav-play" data-tab="lobby">
+        <span class="nav-icon">🎮</span>
+        <span class="nav-label">Play</span>
+      </button>
+      <button class="nav-item" id="nav-tournaments" data-tab="tournaments">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">Tournaments</span>
+      </button>
+      <button class="nav-item" id="nav-leaderboard" data-tab="leaderboard">
+        <span class="nav-icon">🏅</span>
+        <span class="nav-label">Leaderboard</span>
+      </button>
+      <button class="nav-item" id="nav-profile" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Profile</span>
+      </button>
+    </nav>
+  </main>
 
   <!-- ==================== MODALS ==================== -->
 

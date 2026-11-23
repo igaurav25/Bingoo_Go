@@ -96,29 +96,21 @@
   }
 }
 
-/* 3. Tablets & Large Phones (width >= 600px, e.g. iPads, Android Tablets) */
+/* 3. Tablets & Large Screens (width >= 600px) */
 @media (min-width: 600px) {
   .app-container {
-    max-width: 580px;
+    max-width: 460px;
   }
 
   .modes-grid {
-    gap: 14px;
-  }
-
-  .mode-card {
-    padding: 18px 16px;
-  }
-
-  .gameplay-layout .board-game-container {
-    max-width: 420px;
+    gap: 10px;
   }
 }
 
 /* 4. Desktop / Laptop (width >= 1024px) */
 @media (min-width: 1024px) {
   .app-container {
-    max-width: 620px;
+    max-width: 460px;
   }
 
   /* Enhanced desktop tactile hover */

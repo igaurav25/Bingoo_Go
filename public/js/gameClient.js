@@ -121,7 +121,9 @@ class BingoApp {
       disconnectBanner: document.getElementById('disconnect-banner'),
       disconnectBannerText: document.getElementById('disconnect-banner-text'),
 
-      // Navigation Dock
+      // Navigation Dock & Frame
+      mainHeader: document.getElementById('main-header'),
+      appRoot: document.getElementById('app-root'),
       bottomNav: document.getElementById('main-bottom-nav'),
       navItems: document.querySelectorAll('.bottom-nav .nav-item'),
       navHome: document.getElementById('nav-home'),
@@ -1072,21 +1074,30 @@ class BingoApp {
 
   _showScreen(screenName) {
     this.status = screenName;
-    const isGameplay = screenName === 'arranging' || screenName === 'playing';
+    const isGameplay = screenName === 'arranging' || screenName === 'playing' || screenName === 'arrange' || screenName === 'game';
 
-    // Strict No-Scroll Rule (Section 8, 16): lock container height to 100dvh and hide bottom dock
+    // Strict No-Scroll Rule: lock container height to 100dvh, hide main app header and bottom dock
     if (this.dom.appRoot) {
       this.dom.appRoot.classList.toggle('gameplay-active', isGameplay);
     }
     if (this.dom.bottomNav) {
       this.dom.bottomNav.style.display = isGameplay ? 'none' : 'flex';
     }
+    if (this.dom.mainHeader) {
+      this.dom.mainHeader.style.display = isGameplay ? 'none' : 'flex';
+    }
 
     // Hide all screen views cleanly
     document.querySelectorAll('.screen-view').forEach(s => s.classList.add('hidden'));
 
     // Show target screen
-    const targetEl = document.getElementById(`screen-${screenName}`) || document.getElementById(`screen-mode-${screenName.replace('mode-', '')}`);
+    let targetEl = document.getElementById(`screen-${screenName}`);
+    if (!targetEl) {
+      if (screenName === 'arranging' || screenName === 'arrange') targetEl = document.getElementById('screen-arrange');
+      else if (screenName === 'playing' || screenName === 'game') targetEl = document.getElementById('screen-game');
+      else if (screenName === 'finished' || screenName === 'result') targetEl = document.getElementById('screen-result');
+      else if (screenName.startsWith('mode-')) targetEl = document.getElementById(`screen-mode-${screenName.replace('mode-', '')}`);
+    }
     if (targetEl) {
       targetEl.classList.remove('hidden');
     }

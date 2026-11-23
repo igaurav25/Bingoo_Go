@@ -7,13 +7,14 @@
 .lobby-player-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 6px 12px;
   background: #FFFFFF;
   border: 1.5px solid var(--card-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .lobby-avatar-wrap {
@@ -21,15 +22,15 @@
 }
 
 .lobby-avatar-chip {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
   border: 2px solid var(--primary-blue);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
 }
 
 .lobby-level-badge {
@@ -39,9 +40,9 @@
   background: var(--accent-orange);
   color: #FFFFFF;
   font-family: var(--font-display);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 900;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: var(--radius-pill);
   border: 1.5px solid #FFFFFF;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -56,13 +57,13 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .lobby-player-name {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -71,18 +72,18 @@
 
 .lobby-rank-tier {
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: var(--primary-blue);
   background: var(--primary-blue-light);
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: var(--radius-pill);
 }
 
 /* XP Progress Bar */
 .lobby-xp-track {
   width: 100%;
-  height: 7px;
+  height: 6px;
   background: var(--bg-subtle);
   border-radius: var(--radius-pill);
   overflow: hidden;
@@ -100,13 +101,14 @@
 /* Hero Banner (Subway Surfers Vibe) */
 .home-hero-banner {
   background: linear-gradient(135deg, #1769E0 0%, #123B78 100%);
-  border-radius: var(--radius-xl);
-  padding: 22px 18px;
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
   color: #FFFFFF;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(23, 105, 224, 0.25);
+  box-shadow: 0 8px 20px rgba(23, 105, 224, 0.25);
   border: 2px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
 }
 
 .home-hero-banner::after {
@@ -122,33 +124,41 @@
 
 .home-hero-banner .hero-subtitle {
   color: var(--gold-yellow);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .home-hero-banner .hero-title {
   color: #FFFFFF;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.15;
+  margin: 2px 0 6px;
 }
 
 .hero-tiles-row {
   display: flex;
-  gap: 8px;
-  margin: 14px 0 16px;
+  gap: 6px;
+  margin: 6px 0 10px;
   justify-content: center;
 }
 
 .hero-tile {
-  width: 44px;
-  height: 48px;
+  width: 36px;
+  height: 40px;
   background: #FFFFFF;
   color: var(--text-dark);
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-tile);
-  border: 2px solid var(--card-border);
+  border: 1.5px solid var(--card-border);
   position: relative;
   transition: transform 0.2s ease;
 }
@@ -157,26 +167,27 @@
   background: linear-gradient(135deg, var(--accent-orange), var(--coral-red));
   color: #FFFFFF;
   border-color: #FFFFFF;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 14px rgba(255, 85, 85, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 85, 85, 0.35);
 }
 
 /* 4 Game Modes Grid (Chunky Arcade Cards) */
 .modes-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .mode-card {
   background: #FFFFFF;
   border: 1.5px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  padding: 16px 14px;
+  border-radius: var(--radius-md);
+  padding: 10px 10px;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -184,7 +195,7 @@
 }
 
 .mode-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-card-elevated);
 }
 
@@ -194,10 +205,28 @@
 }
 
 .mode-icon-circle {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
   display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
+}
+
+.mode-title {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.mode-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
