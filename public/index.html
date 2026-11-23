@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Bingo - Play Together On Two Phones</title>
-  <meta name="description" content="Classic 2D notebook Bingo on a night desk. Create a room and play live across two phones on any network.">
-  <meta name="theme-color" content="#1B1B5E">
+  <title>Bingo, rainy night</title>
+  <meta name="description" content="Classic 2D notebook Bingo on a rainy night. Create a room and play live across two phones on any network.">
+  <meta name="theme-color" content="#131525">
 
   <!-- Open Graph Meta Tags for WhatsApp & Social Media Preview -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Bingo - Play Together On Two Phones">
-  <meta property="og:description" content="Classic 2D notebook Bingo on a night desk. Tap the link to join my game!">
+  <meta property="og:title" content="Bingo, rainy night">
+  <meta property="og:description" content="Classic 2D notebook Bingo on a rainy night. Tap the link to join my game!">
   <meta property="og:image" content="/assets/og-image.svg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -20,16 +20,16 @@
   <link rel="apple-touch-icon" href="/assets/icon-192.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon-192.svg">
 
-  <!-- Fonts: Kalam Bold (handwriting) & Baloo 2 (UI, Devanagari support) -->
+  <!-- Fonts: Instrument Sans (Display), Figtree (Body), Kalam (Handwriting) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Kalam:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Kalam:wght@700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <!-- Ambient desk radial glow -->
-  <div class="desk-radial-glow" aria-hidden="true"></div>
+  <!-- Ambient Rainy Night Background Canvas -->
+  <canvas id="rain" aria-hidden="true"></canvas>
 
   <!-- Celebration Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
@@ -179,69 +179,70 @@
     <!-- ==================== 4. GAMEPLAY SCREEN ==================== -->
     <section id="screen-game" class="screen hidden">
       <!-- Opponent strip on top -->
-      <div class="opponent-game-strip">
-        <div class="opponent-profile">
-          <span class="conn-dot" id="opponent-conn-dot" title="Connected"></span>
-          <span style="font-size:1.4rem;" id="game-opp-avatar">🐻</span>
-          <span style="font-weight:700; font-size:0.95rem;" id="game-opp-name">Friend</span>
+      <header class="top opponent-game-strip">
+        <div class="opp opponent-profile">
+          <span class="av" id="game-opp-avatar" aria-hidden="true">🐻</span>
+          <div>
+            <div class="nm" id="game-opp-name">Friend</div>
+            <div class="ol"><span class="conn-dot" id="opponent-conn-dot" title="Connected"></span> <span id="opponent-conn-text">online</span></div>
+          </div>
         </div>
-        <!-- Opponent's mini BINGO progress (public data only) -->
-        <div class="opponent-bingo-mini" id="opponent-mini-bingo" aria-label="Opponent BINGO progress">
-          <div class="mini-letter" data-idx="0">B</div>
-          <div class="mini-letter" data-idx="1">I</div>
-          <div class="mini-letter" data-idx="2">N</div>
-          <div class="mini-letter" data-idx="3">G</div>
-          <div class="mini-letter" data-idx="4">O</div>
+        <!-- Opponent's mini BINGO progress -->
+        <div class="mini opponent-bingo-mini" id="opponent-mini-bingo" role="img" aria-label="Opponent BINGO progress">
+          <span class="mw mini-letter" data-idx="0">B</span>
+          <span class="mw mini-letter" data-idx="1">I</span>
+          <span class="mw mini-letter" data-idx="2">N</span>
+          <span class="mw mini-letter" data-idx="3">G</span>
+          <span class="mw mini-letter" data-idx="4">O</span>
         </div>
-      </div>
+      </header>
 
-      <!-- Turn indicator & timer strip -->
-      <div class="game-info-strip">
+      <!-- Turn indicator & calls -->
+      <div class="turn game-info-strip">
         <div class="turn-pill my-turn" id="turn-indicator-pill">
-          <span id="turn-dot">●</span> <span id="turn-text">Your turn</span>
+          <span id="turn-dot">●</span> <span id="turn-text">Teri baari</span>
         </div>
         <div class="turn-timer-clock" id="turn-clock-display" style="display:none;">
           ⏱️ <span id="turn-clock-seconds">30</span>s
         </div>
-      </div>
-
-      <!-- Called numbers strip -->
-      <div class="called-numbers-strip" id="called-numbers-strip">
-        <span style="font-size:0.8rem; font-weight:700;" id="lbl-recent-calls">Calls:</span>
-        <!-- Last called numbers appended here -->
+        <div class="calls called-numbers-strip" id="called-numbers-strip" role="img" aria-label="Last called numbers">
+        </div>
       </div>
 
       <!-- Paper Sheet Card for Board & Letter Strikes -->
-      <div class="paper-sheet-card">
+      <section class="sheet paper-sheet-card">
         <!-- B-I-N-G-O letters above grid -->
-        <div class="bingo-letters-row" id="player-bingo-row">
-          <div class="bingo-letter-box" data-letter="B"><span class="letter-glyph">B</span><span class="letter-strike-line"></span></div>
-          <div class="bingo-letter-box" data-letter="I"><span class="letter-glyph">I</span><span class="letter-strike-line"></span></div>
-          <div class="bingo-letter-box" data-letter="N"><span class="letter-glyph">N</span><span class="letter-strike-line"></span></div>
-          <div class="bingo-letter-box" data-letter="G"><span class="letter-glyph">G</span><span class="letter-strike-line"></span></div>
-          <div class="bingo-letter-box" data-letter="O"><span class="letter-glyph">O</span><span class="letter-strike-line"></span></div>
+        <div class="word bingo-letters-row" id="player-bingo-row" role="img" aria-label="BINGO letters">
+          <span class="w bingo-letter-box" data-letter="B"><span class="letter-glyph">B</span><i class="x letter-strike-line"></i></span>
+          <span class="w bingo-letter-box" data-letter="I"><span class="letter-glyph">I</span><i class="x letter-strike-line"></i></span>
+          <span class="w bingo-letter-box" data-letter="N"><span class="letter-glyph">N</span><i class="x letter-strike-line"></i></span>
+          <span class="w bingo-letter-box" data-letter="G"><span class="letter-glyph">G</span><i class="x letter-strike-line"></i></span>
+          <span class="w bingo-letter-box" data-letter="O"><span class="letter-glyph">O</span><i class="x letter-strike-line"></i></span>
         </div>
 
         <!-- 5x5 Grid Board with SVG Line Cut Overlay -->
-        <div class="board-container">
-          <div class="grid-board" id="game-grid-board">
+        <div class="gw board-container">
+          <div class="grid grid-board" id="game-grid-board">
             <!-- 25 Number Cells -->
           </div>
           <!-- Continuous Slanted Red Pen Stroke Overlay -->
           <svg 
             id="line-strike-overlay" 
             class="line-strike-overlay" 
-            viewBox="-30 -30 560 560" 
+            viewBox="-20 -20 540 540" 
             preserveAspectRatio="xMidYMid meet"
             aria-hidden="true"
           ></svg>
         </div>
-      </div>
+      </section>
 
-      <!-- BINGO Button centered directly below grid (Section 6) -->
+      <!-- Central BINGO Button -->
       <div class="bingo-button-container">
-        <button id="bingo-claim-btn" class="bingo-center-btn locked" disabled aria-label="Claim Bingo">
-          <span id="bingo-btn-text">BINGO (0/5)</span>
+        <button id="bingo-claim-btn" class="btn bingo bingo-center-btn locked" disabled aria-label="Claim Bingo">
+          <span id="bingo-btn-text">BINGO</span>
+          <span class="pips" id="bingo-pips">
+            <i></i><i></i><i></i><i></i><i></i>
+          </span>
         </button>
       </div>
 

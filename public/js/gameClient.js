@@ -21,6 +21,7 @@ import { soundManager } from './audio.js';
 import { ConfettiCelebration } from './confetti.js';
 import { generateQRCodeSVG } from './qrcode.js';
 import { t, setLanguage, getLanguage } from './i18n.js';
+import { initRain } from './rain.js';
 
 class BingoApp {
   constructor() {
@@ -40,6 +41,7 @@ class BingoApp {
 
     // Subsystems
     this.dom = this._cacheDOM();
+    initRain('rain');
     this.animationQueue = new AnimationQueue();
     this.renderOverlay = new RenderOverlay(
       this.dom.lineOverlay,
@@ -778,8 +780,9 @@ class BingoApp {
       const isMarked = this.markedNumbers.has(num);
 
       const cell = document.createElement('button');
-      cell.className = `cell ${isMarked ? 'marked' : ''}`;
+      cell.className = `cell c ${isMarked ? 'marked m' : ''}`;
       cell.dataset.number = String(num);
+      cell.dataset.n = String(num);
       cell.textContent = String(num);
 
       const stamp = document.createElement('div');
@@ -815,15 +818,18 @@ class BingoApp {
     // Update cell
     const cell = this.dom.gameGridBoard.querySelector(`[data-number="${number}"]`);
     if (cell) {
-      cell.classList.add('marked');
+      cell.classList.add('marked', 'm');
     }
 
     // Append to called numbers strip
-    const badge = document.createElement('div');
+    const badge = document.createElement('b');
     badge.className = 'called-num-badge';
     badge.textContent = String(number);
     if (isAutoPicked) badge.title = 'Auto-picked by timer';
     this.dom.calledNumbersStrip.appendChild(badge);
+    if (this.dom.calledNumbersStrip.children.length > 5) {
+      this.dom.calledNumbersStrip.firstElementChild.remove();
+    }
 
     soundManager.playMark();
     this._vibrate(40);
@@ -854,9 +860,10 @@ class BingoApp {
   }
 
   _updateOpponentMiniBingo(count) {
-    const letters = this.dom.opponentMiniBingo.querySelectorAll('.mini-letter');
+    const letters = this.dom.opponentMiniBingo.querySelectorAll('.mini-letter, .mw');
     letters.forEach((el, idx) => {
       el.classList.toggle('struck', idx < count);
+      el.classList.toggle('s', idx < count);
     });
   }
 
@@ -888,19 +895,22 @@ class BingoApp {
 
   _updateClaimButtonState() {
     const count = this.completedLines.length;
+    const pips = this.dom.bingoClaimBtn.querySelectorAll('.pips i');
+    pips.forEach((p, idx) => p.classList.toggle('f', idx < count));
+
     if (count >= 5) {
       const wasLocked = this.dom.bingoClaimBtn.classList.contains('locked');
-      this.dom.bingoClaimBtn.className = 'bingo-center-btn ready';
+      this.dom.bingoClaimBtn.className = 'btn bingo bingo-center-btn ready on';
       this.dom.bingoClaimBtn.disabled = false;
-      this.dom.bingoBtnText.textContent = t('claimBingo');
+      this.dom.bingoBtnText.textContent = 'BINGO';
       if (wasLocked) {
         soundManager.playButtonReady();
         this._vibrate([80, 50, 120]);
       }
     } else {
-      this.dom.bingoClaimBtn.className = 'bingo-center-btn locked';
+      this.dom.bingoClaimBtn.className = 'btn bingo bingo-center-btn locked';
       this.dom.bingoClaimBtn.disabled = true;
-      this.dom.bingoBtnText.textContent = `BINGO (${count}/5)`;
+      this.dom.bingoBtnText.textContent = 'BINGO';
     }
   }
 

@@ -141,10 +141,10 @@ export class RenderOverlay {
     line.setAttribute('x2', String(geom.x2));
     line.setAttribute('y2', String(geom.y2));
     line.setAttribute('pathLength', '1');
-    line.setAttribute('stroke-dasharray', '1 1');
+    line.setAttribute('stroke-dasharray', '1');
     line.setAttribute('stroke-dashoffset', '0');
-    line.setAttribute('stroke', 'url(#pen-gradient)');
-    line.setAttribute('stroke-width', '14');
+    line.setAttribute('stroke', 'var(--pen-red)');
+    line.setAttribute('stroke-width', '9');
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('class', 'bingo-pen-stroke settled');
     line.dataset.lineId = lineId;
@@ -157,10 +157,10 @@ export class RenderOverlay {
     const letterEl = container.children[letterIndex];
     if (!letterEl) return;
 
-    letterEl.classList.add('struck', 'instant');
-    const strikeLine = letterEl.querySelector('.letter-strike-line');
+    letterEl.classList.add('struck', 's', 'instant');
+    const strikeLine = letterEl.querySelector('.letter-strike-line, .x');
     if (strikeLine) {
-      strikeLine.style.transform = 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1)';
+      strikeLine.style.clipPath = 'inset(0 0 0 0)';
     }
   }
 
@@ -190,10 +190,10 @@ export class RenderOverlay {
     line.setAttribute('x2', String(geom.x2));
     line.setAttribute('y2', String(geom.y2));
     line.setAttribute('pathLength', '1');
-    line.setAttribute('stroke-dasharray', '1 1');
-    line.setAttribute('stroke-dashoffset', '1');
-    line.setAttribute('stroke', 'url(#pen-gradient)');
-    line.setAttribute('stroke-width', '14');
+    line.setAttribute('stroke-dasharray', '1');
+    line.setAttribute('stroke-dashoffset', '1.02');
+    line.setAttribute('stroke', 'var(--pen-red)');
+    line.setAttribute('stroke-width', '9');
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('class', 'bingo-pen-stroke');
     line.dataset.lineId = lineInfo.id;
@@ -203,16 +203,16 @@ export class RenderOverlay {
     // Audio cue
     soundManager.playLineStroke(duration);
 
-    // Animate stroke-dashoffset from 1 to 0
+    // Animate stroke-dashoffset from 1.02 to 0
     if (duration > 0) {
       const anim = line.animate(
         [
-          { strokeDashoffset: '1' },
+          { strokeDashoffset: '1.02' },
           { strokeDashoffset: '0' }
         ],
         {
           duration,
-          easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          easing: 'cubic-bezier(.22,.8,.3,1)',
           fill: 'forwards'
         }
       );
@@ -249,14 +249,13 @@ export class RenderOverlay {
     soundManager.playLetterStrike();
 
     letterEl.classList.add('striking');
-    const strikeLine = letterEl.querySelector('.letter-strike-line');
+    const strikeLine = letterEl.querySelector('.letter-strike-line, .x');
 
     if (strikeLine && duration > 0) {
       const anim = strikeLine.animate(
         [
-          { transform: 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(0)' },
-          { transform: 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1.10)' },
-          { transform: 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1)' }
+          { clipPath: 'inset(0 100% 0 0)' },
+          { clipPath: 'inset(0 0 0 0)' }
         ],
         {
           duration,
@@ -266,12 +265,11 @@ export class RenderOverlay {
       );
       await anim.finished;
     } else if (strikeLine) {
-      strikeLine.style.transform = 'translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1)';
+      strikeLine.style.clipPath = 'inset(0 0 0 0)';
     }
 
-    // Dim to 45% with small pop
     letterEl.classList.remove('striking');
-    letterEl.classList.add('struck');
+    letterEl.classList.add('struck', 's');
   }
 
   /**

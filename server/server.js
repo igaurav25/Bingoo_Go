@@ -70,7 +70,17 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. Single App, One URL Routing: / and /r/:code serve index.html
+  // 3. Single App, One URL Routing: / and /r/:code serve index.html; /demo serves standalone demo
+  if (pathname === '/demo') {
+    const demoPath = path.join(PUBLIC_DIR, 'demo.html');
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache'
+    });
+    fs.createReadStream(demoPath).pipe(res);
+    return;
+  }
+
   if (pathname === '/' || pathname.startsWith('/r/')) {
     const indexPath = path.join(PUBLIC_DIR, 'index.html');
     res.writeHead(200, {

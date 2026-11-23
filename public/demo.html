@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bingo, rainy night</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Figtree:wght@400;500&family=Kalam:wght@700&display=swap" rel="stylesheet">
+<style>
+/* hallmark: ribbon, two-in-the-morning, adapted for a notebook bingo game */
+:root{
+--color-paper:oklch(13.2% .022 258);--color-paper-2:oklch(16.4% .024 258);--color-paper-3:oklch(20% .026 258);
+--color-rule:oklch(27% .025 258);--color-ink:oklch(93.5% .012 85);--color-muted:oklch(72% .02 255);
+--color-accent:oklch(82% .095 68);--color-accent-ink:oklch(20% .03 62);--color-ok:oklch(80% .12 165);
+--color-rain:oklch(82% .03 240/.2);--pen-red:oklch(56% .215 27);--pen-red-lit:oklch(70% .19 22);
+--sheet:oklch(96.5% .012 85);--sheet-rule:oklch(86% .02 250);--sheet-ink:oklch(24% .05 265);
+--mark-fill:oklch(91% .05 262);--mark-ring:oklch(48% .17 262);
+--edge-light:inset 0 1px 0 oklch(100% 0 0/.12);
+--shadow-part:0 1px 0 oklch(0% 0 0/.5),0 10px 18px -6px oklch(0% 0 0/.6);
+--shadow-panel:0 1px 0 oklch(0% 0 0/.4),0 24px 48px -16px oklch(0% 0 0/.7);
+--glow:0 0 30px oklch(82% .095 68/.4);
+--font-display:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;--font-body:"Figtree",ui-sans-serif,system-ui,sans-serif;--font-hand:"Kalam","Segoe Print",cursive;
+--radius-card:20px;
+color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);overflow-x:clip}
+body{margin:0;overflow-x:clip;background:var(--color-paper);color:var(--color-ink);font:400 16px/1.5 var(--font-body)}
+#rain{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;max-width:440px;margin:0 auto;padding:16px 16px 28px}
+.top,.turn,.opp{display:flex;align-items:center;gap:10px}
+.top,.turn{justify-content:space-between}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(var(--color-paper-3),var(--color-paper-2));border:1px solid var(--color-rule);font:500 15px var(--font-display)}
+.nm{font-weight:500;line-height:1.1}.ol{font-size:13px;color:var(--color-ok);line-height:1.2}
+.mini{display:flex;gap:4px;font:500 15px var(--font-display)}
+.mw{position:relative;width:16px;text-align:center}
+.mw.s{color:var(--color-muted)}
+.mw.s::after,.x{content:"";position:absolute;left:-3px;right:-3px;top:50%;height:2px;margin-top:-1px;border-radius:2px;background:var(--pen-red-lit);transform:rotate(-34deg)}
+.turn{margin:14px 0 4px;font-weight:500}
+.calls{display:flex;gap:6px}
+.calls b{min-width:28px;height:26px;padding:0 4px;border-radius:7px;background:var(--color-paper-3);border:1px solid var(--color-rule);font:700 15px/24px var(--font-hand);text-align:center}
+.word{display:flex;justify-content:space-around;margin:6px 8px 10px;font:400 clamp(34px,11vw,46px)/1.1 var(--font-display)}
+.w{position:relative;width:1.25em;text-align:center}
+.w.s{color:var(--color-muted)}
+.x{height:5px;margin-top:-2px;left:-4px;right:-4px;clip-path:inset(0 100% 0 0)}
+.sheet{background:var(--sheet);border-radius:var(--radius-card);padding:14px;box-shadow:var(--edge-light),var(--shadow-panel)}
+.gw{position:relative;aspect-ratio:1}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:1px;background:var(--sheet-rule);height:100%}
+.c{border:2px solid var(--sheet);border-radius:8px;background:var(--sheet);color:var(--sheet-ink);font:700 clamp(18px,6vw,26px) var(--font-hand);padding:0;cursor:pointer;touch-action:manipulation}
+.c.m{background:var(--mark-fill);border-color:var(--mark-ring);cursor:default}
+#ov{position:absolute;left:-4%;top:-4%;width:108%;height:108%;pointer-events:none}
+#ov path{fill:none;stroke:var(--pen-red);stroke-width:9;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1.02}
+.btn{min-height:52px;padding:0 22px;border:1px solid var(--color-rule);border-radius:999px;background:linear-gradient(var(--color-paper-3),var(--color-paper-2));box-shadow:var(--edge-light),var(--shadow-part);color:var(--color-ink);font:500 16px/1 var(--font-body);cursor:pointer;touch-action:manipulation}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.c:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+.bingo{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;width:min(78%,280px);min-height:64px;margin:22px auto 0;font:500 28px/1 var(--font-display)}
+.bingo:disabled{color:var(--color-muted);cursor:default}
+.bingo.on{background:var(--color-accent);border-color:var(--color-accent);color:var(--color-accent-ink);box-shadow:var(--edge-light),var(--glow)}
+.bingo.on::after{content:"";position:absolute;inset:-6px;border:2px solid var(--color-accent);border-radius:999px;animation:pulse 1.8s ease-in-out infinite;pointer-events:none}
+.bingo.on .pips{display:none}
+.pips{display:flex;gap:4px}
+.pips i{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--color-muted)}
+.pips i.f{background:var(--color-accent);border-color:var(--color-accent)}
+.row{display:flex;gap:12px;justify-content:center;margin-top:18px}
+.st{min-height:3em;margin:14px 0 0;text-align:center;color:var(--color-muted);font-size:15px}
+@keyframes pulse{0%,100%{opacity:.15}50%{opacity:.8}}
+@media (prefers-reduced-motion:reduce){.bingo.on::after{animation:none;opacity:.6}}
+</style>
+</head>
+<body>
+<canvas id="rain" aria-hidden="true"></canvas>
+<main class="app">
+<header class="top"><div class="opp"><span class="av" aria-hidden="true">R</span><div><div class="nm">Rohit</div><div class="ol">online</div></div></div><div class="mini" id="ow" role="img" aria-label="Rohit ki BINGO progress"><span class="mw">B</span><span class="mw">I</span><span class="mw">N</span><span class="mw">G</span><span class="mw">O</span></div></header>
+<div class="turn"><span>Teri baari</span><div class="calls" id="calls" role="img" aria-label="Last called numbers"></div></div>
+<div class="word" id="w" role="img" aria-label="BINGO letters"><span class="w">B<i class="x"></i></span><span class="w">I<i class="x"></i></span><span class="w">N<i class="x"></i></span><span class="w">G<i class="x"></i></span><span class="w">O<i class="x"></i></span></div>
+<section class="sheet"><div class="gw"><div class="grid" id="g"></div><svg id="ov" viewBox="-20 -20 540 540" aria-hidden="true"></svg></div></section>
+<button class="btn bingo" id="bingo" disabled><span>BINGO</span><span class="pips" id="pips"></span></button>
+<div class="row"><button class="btn" id="call">Number bolo</button><button class="btn" id="new">Naya board</button></div>
+<p class="st" id="st" aria-live="polite"></p>
+</main>
+<script>
+const $=s=>document.querySelector(s),rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const gEl=$('#g'),ov=$('#ov'),wEl=$('#w'),bt=$('#bingo'),st=$('#st'),cl=$('#calls'),ow=$('#ow'),pips=$('#pips');
+const R=[0,1,2,3,4];
+const LN=[...R.map(i=>({t:'r',i,p:R.map(c=>i*5+c)})),...R.map(i=>({t:'c',i,p:R.map(r=>r*5+i)}))];
+let g,mk,done,q,won,opp,ep=0;
+const wait=ms=>new Promise(r=>setTimeout(r,rm?0:ms));
+function init(){
+ep++;
+g=Array.from({length:25},(_,i)=>i+1);
+for(let i=24;i>0;i--){const j=Math.floor(Math.random()*(i+1));[g[i],g[j]]=[g[j],g[i]]}
+mk=new Set();done=[];q=Promise.resolve();won=false;opp=0;
+gEl.innerHTML=g.map(n=>`<button class="c" data-n="${n}" aria-label="Number ${n}">${n}</button>`).join('');
+ov.innerHTML='';cl.innerHTML='';
+[...wEl.children].forEach(e=>{e.classList.remove('s');e.querySelector('.x').getAnimations().forEach(a=>a.cancel())});
+[...ow.children].forEach(e=>e.classList.remove('s'));
+pips.innerHTML='<i></i>'.repeat(5);bt.className='btn bingo';bt.disabled=true;
+st.textContent='Number bolo ya apne board par tap karo. Poori row ya column par ek lal line kategi.';
+}
+async function cut(l,k,e){
+try{
+const c=(l.i+.5)*100,p=document.createElementNS('http://www.w3.org/2000/svg','path');
+p.setAttribute('d',l.t==='r'?`M-15 ${c+25}L515 ${c-25}`:`M${c-25} -15L${c+25} 515`);
+p.setAttribute('pathLength','1');ov.append(p);
+await p.animate([{strokeDashoffset:1.02},{strokeDashoffset:0}],{duration:rm?0:450,easing:'cubic-bezier(.22,.8,.3,1)',fill:'forwards'}).finished;
+if(e!==ep)return;
+if(k<=5){
+const w=wEl.children[k-1];
+await wait(120);
+await w.querySelector('.x').animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0 0 0 0)'}],{duration:rm?0:300,easing:'ease-out',fill:'forwards'}).finished;
+if(e!==ep)return;
+w.classList.add('s');
+}
+if(k===5)bt.classList.add('on');
+await wait(150);
+}catch(_){}
+}
+function call(n){
+if(won||mk.has(n))return;
+mk.add(n);
+gEl.querySelector(`[data-n="${n}"]`).classList.add('m');
+const b=document.createElement('b');b.textContent=n;cl.append(b);if(cl.children.length>4)cl.firstChild.remove();
+if(opp<5&&Math.random()<.2)ow.children[opp++].classList.add('s');
+const e=ep;
+LN.filter(l=>!done.includes(l)&&l.p.every(p=>mk.has(g[p]))).forEach(l=>{
+done.push(l);const k=done.length;
+[...pips.children].forEach((x,i)=>x.classList.toggle('f',i<k));
+if(k>=5)bt.disabled=false;
+q=q.then(()=>e===ep?cut(l,k,e):0);
+});
+}
+gEl.onclick=e=>{const n=+e.target.dataset.n;if(n)call(n)};
+$('#call').onclick=()=>{const r=g.filter(n=>!mk.has(n));if(r.length&&!won)call(r[Math.floor(Math.random()*r.length)])};
+$('#new').onclick=init;
+bt.onclick=()=>{if(done.length<5||won)return;won=true;bt.disabled=true;st.textContent='BINGO verified: 5 lines poori. Tum jeete. Demo hai, asli game me server verify karega.'};
+const cv=$('#rain'),cx=cv.getContext('2d');let W,H,D,rc,live=true;
+function fit(){const r=devicePixelRatio||1;W=cv.width=innerWidth*r;H=cv.height=innerHeight*r;rc=getComputedStyle(document.documentElement).getPropertyValue('--color-rain');D=Array.from({length:Math.round(innerWidth/8)},()=>({x:Math.random()*W,y:Math.random()*H,l:(16+Math.random()*30)*r,v:(1.4+Math.random()*2.4)*r}))}
+function draw(){cx.clearRect(0,0,W,H);cx.strokeStyle=rc;cx.lineWidth=devicePixelRatio||1;cx.beginPath();for(const d of D){cx.moveTo(d.x,d.y);cx.lineTo(d.x-d.l*.1,d.y+d.l);if(!rm){d.y+=d.v;if(d.y>H){d.y=-d.l;d.x=Math.random()*W}}}cx.stroke()}
+addEventListener('resize',()=>{fit();if(rm)draw()});
+document.addEventListener('visibilitychange',()=>live=!document.hidden);
+fit();init();
+(function loop(){if(live)draw();if(!rm)requestAnimationFrame(loop)})();
+</script>
+</body>
+</html>

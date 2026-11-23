@@ -11,63 +11,79 @@
  */
 
 :root {
-  /* Night Desk Theme Tokens */
-  --bg-top: #1B1B5E;
-  --bg-bottom: #4B2F9E;
-  --desk-glow: rgba(110, 120, 255, 0.30);
-  
-  --paper-card: #F6F8FF;
-  --paper-rules: #CBD5F5;
-  --paper-shadow: 0 16px 40px -8px rgba(10, 10, 45, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  /* Hallmark: ribbon, two-in-the-morning, adapted for a notebook bingo game */
+  --color-paper: oklch(13.2% .022 258);
+  --color-paper-2: oklch(16.4% .024 258);
+  --color-paper-3: oklch(20% .026 258);
+  --color-rule: oklch(27% .025 258);
+  --color-ink: oklch(93.5% .012 85);
+  --color-muted: oklch(72% .02 255);
+  --color-accent: oklch(82% .095 68);
+  --color-accent-ink: oklch(20% .03 62);
+  --color-ok: oklch(80% .12 165);
+  --color-rain: oklch(82% .03 240 / 0.2);
+  --pen-red: oklch(56% .215 27);
+  --pen-red-lit: oklch(70% .19 22);
+  --sheet: oklch(96.5% .012 85);
+  --sheet-rule: oklch(86% .02 250);
+  --sheet-ink: oklch(24% .05 265);
+  --mark-fill: oklch(91% .05 262);
+  --mark-ring: oklch(48% .17 262);
+  --edge-light: inset 0 1px 0 oklch(100% 0 0 / 0.12);
+  --shadow-part: 0 1px 0 oklch(0% 0 0 / 0.5), 0 10px 18px -6px oklch(0% 0 0 / 0.6);
+  --shadow-panel: 0 1px 0 oklch(0% 0 0 / 0.4), 0 24px 48px -16px oklch(0% 0 0 / 0.7);
+  --glow: 0 0 30px oklch(82% .095 68 / 0.4);
+  --font-display: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-hand: "Kalam", "Segoe Print", cursive;
+  --radius-card: 20px;
 
-  --ink-paper: #1D2459;
-  --pen-blue: #2946D9;
-  --pen-blue-tint: rgba(41, 70, 217, 0.16);
-  --pen-blue-ring: #2946D9;
-
-  --red-pen: #E0243F;
-  --red-pen-dark: #FF5470;
-  --red-pen-glow: rgba(224, 36, 63, 0.35);
-
-  --gold-top: #FFC83D;
-  --gold-bottom: #FF9F1C;
-  --gold-glow: rgba(255, 200, 61, 0.60);
-
-  --mint-success: #35D6A0;
-  --mint-tint: rgba(53, 214, 160, 0.18);
-
-  --text-white: #FFFFFF;
-  --text-dim: #D1D5F0;
-  --text-muted: #8E96C8;
-
-  --font-hand: 'Kalam', cursive, system-ui, sans-serif;
-  --font-ui: 'Baloo 2', system-ui, -apple-system, sans-serif;
-
-  --radius-cell: 12px;
-  --radius-paper: 24px;
-  --radius-pill: 9999px;
-
+  /* Backward compatibility aliases */
+  --bg-top: var(--color-paper);
+  --bg-bottom: var(--color-paper-2);
+  --desk-glow: oklch(82% .095 68 / 0.15);
+  --paper-card: var(--sheet);
+  --paper-rules: var(--sheet-rule);
+  --ink-paper: var(--sheet-ink);
+  --pen-blue: var(--mark-ring);
+  --pen-blue-tint: oklch(91% .05 262 / 0.5);
+  --pen-blue-ring: var(--mark-ring);
+  --red-pen: var(--pen-red);
+  --red-pen-dark: var(--pen-red-lit);
+  --red-pen-glow: oklch(56% .215 27 / 0.35);
+  --gold-top: var(--color-accent);
+  --gold-bottom: var(--color-accent);
+  --gold-glow: var(--glow);
+  --mint-success: var(--color-ok);
+  --mint-tint: oklch(80% .12 165 / 0.18);
+  --text-white: var(--color-ink);
+  --text-dim: var(--color-muted);
+  --text-muted: var(--color-muted);
+  --font-ui: var(--font-body);
+  --radius-cell: 8px;
+  --radius-paper: var(--radius-card);
+  --radius-pill: 999px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Alternate Background Themes (Settings) */
 body[data-theme="ocean"] {
-  --bg-top: #081F3A;
-  --bg-bottom: #0B4F6C;
-  --desk-glow: rgba(30, 144, 255, 0.25);
+  --color-paper: oklch(14% .03 235);
+  --color-paper-2: oklch(18% .035 235);
+  --color-paper-3: oklch(22% .04 235);
 }
 
 body[data-theme="plum"] {
-  --bg-top: #2A1048;
-  --bg-bottom: #5A2480;
-  --desk-glow: rgba(186, 85, 211, 0.28);
+  --color-paper: oklch(14% .03 310);
+  --color-paper-2: oklch(18% .035 310);
+  --color-paper-3: oklch(22% .04 310);
 }
 
 body[data-theme="forest"] {
-  --bg-top: #0C2B25;
-  --bg-bottom: #145A45;
-  --desk-glow: rgba(53, 214, 160, 0.25);
+  --color-paper: oklch(14% .03 160);
+  --color-paper-2: oklch(18% .035 160);
+  --color-paper-3: oklch(22% .04 160);
 }
 
 * {
@@ -77,18 +93,31 @@ body[data-theme="forest"] {
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  overflow-x: clip;
+}
+
 body {
-  font-family: var(--font-ui);
-  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
-  background-attachment: fixed;
-  color: var(--text-white);
+  margin: 0;
+  overflow-x: clip;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: 400 16px/1.5 var(--font-body);
+  color-scheme: dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: calc(var(--safe-top) + 12px) 14px calc(var(--safe-bottom) + 16px);
-  overflow-x: hidden;
-  position: relative;
+}
+
+#rain {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* Night Desk Glow Behind Main Content */
@@ -431,17 +460,10 @@ body {
 }
 
 /* THE NOTEBOOK PAPER SHEET (The Star Surface) */
-.paper-sheet-card {
-  background: var(--paper-card);
-  border-radius: var(--radius-paper);
-  box-shadow: var(--paper-shadow);
-  /* Faint ruled notebook lines (CSS only) */
-  background-image: repeating-linear-gradient(
-    transparent,
-    transparent 31px,
-    var(--paper-rules) 31px,
-    var(--paper-rules) 32px
-  );
+.sheet, .paper-sheet-card {
+  background: var(--sheet);
+  border-radius: var(--radius-card);
+  box-shadow: var(--edge-light), var(--shadow-panel);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -450,7 +472,7 @@ body {
 }
 
 /* 5x5 Grid Board on Paper */
-.board-container {
+.gw, .board-container {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -458,50 +480,58 @@ body {
   overflow: visible;
 }
 
-.grid-board {
+.grid, .grid-board {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
   width: 100%;
   height: 100%;
-  gap: 4px;
+  gap: 1px;
+  background: var(--sheet-rule);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-/* Grid Cells (Radius 12px per spec) */
-.cell {
-  background: #ffffff;
-  border: 1.5px solid #E1E6F5;
-  border-radius: var(--radius-cell);
-  font-family: var(--font-hand);
-  font-size: clamp(1.4rem, 5vw, 1.85rem);
-  font-weight: 700;
-  color: var(--ink-paper);
+/* Grid Cells */
+.c, .cell {
+  border: 2px solid var(--sheet);
+  border-radius: 8px;
+  background: var(--sheet);
+  color: var(--sheet-ink);
+  font: 700 clamp(18px, 6vw, 26px) var(--font-hand);
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   position: relative;
   user-select: none;
-  touch-action: manipulation;
-  transition: transform 0.15s ease, background 0.15s ease;
-  box-shadow: 0 1px 3px rgba(29, 36, 89, 0.06);
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-.cell:active {
-  transform: scale(0.95);
+.c:active, .cell:active {
+  transform: scale(0.96);
+}
+
+.c:hover, .cell:hover {
+  background: oklch(94% .015 250);
 }
 
 /* Cell Selection / Swapping State in Arrange Mode */
-.cell.selected {
-  outline: 3px solid var(--pen-blue);
-  background: #EEF2FF;
+.c.selected, .cell.selected {
+  outline: 3px solid var(--color-accent);
+  background: var(--mark-fill);
   transform: scale(1.04);
   z-index: 2;
 }
 
-/* Pen Blue Marked Style (Constraint 4 & Section 5: Soft tint + ink ring, digits stay readable) */
-.cell.marked {
-  color: var(--pen-blue);
+/* Pen Marked Style: soft tint + ring, digits stay readable */
+.c.m, .cell.marked {
+  background: var(--mark-fill);
+  border-color: var(--mark-ring);
+  color: var(--sheet-ink);
+  cursor: default;
 }
 
 .cell-ink-stamp {
@@ -509,36 +539,37 @@ body {
   width: 78%;
   height: 78%;
   border-radius: 50%;
-  border: 2.5px solid var(--pen-blue-ring);
-  background-color: var(--pen-blue-tint);
+  border: 2px solid var(--mark-ring);
+  background-color: var(--mark-fill);
   pointer-events: none;
   opacity: 0;
   transform: scale(0.6) rotate(-12deg);
   transition: transform 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.22s ease;
 }
 
-.cell.marked .cell-ink-stamp {
+.cell.marked .cell-ink-stamp, .c.m .cell-ink-stamp {
   opacity: 1;
   transform: scale(1) rotate(5deg);
 }
 
-/* Red Pen Continuous Slanted Strike Overlay (Bold Red Pen #E0243F) */
-.line-strike-overlay {
+/* Red Pen Continuous Slanted Strike Overlay */
+#ov, .line-strike-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  left: -4%;
+  top: -4%;
+  width: 108%;
+  height: 108%;
   pointer-events: none;
   z-index: 10;
   overflow: visible;
 }
 
-.bingo-pen-stroke {
-  stroke: var(--red-pen);
-  stroke-width: 12;
+#ov path, #ov line, .line-strike-overlay path, .line-strike-overlay line, .bingo-pen-stroke {
+  fill: none;
+  stroke: var(--pen-red);
+  stroke-width: 9;
   stroke-linecap: round;
-  filter: drop-shadow(0 2px 4px rgba(224, 36, 63, 0.35));
+  filter: drop-shadow(0 1px 2px rgba(224, 36, 63, 0.4));
 }
 
 .bingo-pen-stroke.settled {
@@ -546,122 +577,150 @@ body {
 }
 
 /* BINGO WORD STRIP (Above Grid) */
-.bingo-letters-row {
+.word, .bingo-letters-row {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  justify-content: space-around;
+  margin: 6px 8px 10px;
+  font: 400 clamp(34px, 11vw, 46px)/1.1 var(--font-display);
 }
 
-.bingo-letter-box {
-  flex: 1;
-  margin: 0 4px;
-  height: 44px;
-  background: #ffffff;
-  border: 2px solid var(--ink-paper);
-  border-radius: 8px;
+.w, .bingo-letter-box {
+  position: relative;
+  width: 1.25em;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-hand);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ink-paper);
-  position: relative;
-  overflow: visible;
-  transition: opacity 0.3s ease, transform 0.2s ease;
+  transition: color 0.3s ease;
 }
 
-/* Red Pen slanted strike across letter with 10% overshoot */
-.letter-strike-line {
+.w.s, .bingo-letter-box.struck {
+  color: var(--color-muted);
+}
+
+.x, .letter-strike-line {
+  content: "";
   position: absolute;
+  left: -4px;
+  right: -4px;
   top: 50%;
-  left: 50%;
-  width: var(--stroke-length, 120%);
-  height: 4px;
-  background: var(--red-pen);
+  height: 5px;
+  margin-top: -2px;
   border-radius: 2px;
-  transform: translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(0);
-  transform-origin: center;
+  background: var(--pen-red-lit);
+  transform: rotate(-34deg);
+  clip-path: inset(0 100% 0 0);
   pointer-events: none;
-  box-shadow: 0 0 4px var(--red-pen-glow);
+  transition: clip-path 0.3s ease-out;
 }
 
-.bingo-letter-box.struck {
-  opacity: 0.45;
-  color: #7B82A8;
-  border-color: #CBD5F5;
-  transform: scale(0.96);
-}
-
-.bingo-letter-box.struck .letter-strike-line {
-  transform: translate(-50%, -50%) rotate(var(--stroke-angle, -32deg)) scaleX(1);
+.w.s .x, .bingo-letter-box.struck .letter-strike-line {
+  clip-path: inset(0 0 0 0);
 }
 
 /* OPPONENT STRIP (Top of Game) */
-.opponent-game-strip {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 16px;
-  padding: 8px 14px;
+.top, .opponent-game-strip {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
-.opponent-profile {
+.opp, .opponent-profile {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.av {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(var(--color-paper-3), var(--color-paper-2));
+  border: 1px solid var(--color-rule);
+  font: 500 15px var(--font-display);
+  color: var(--color-ink);
+}
+
+.nm, .game-opp-name {
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+}
+
+.ol, .conn-dot-text {
+  font-size: 13px;
+  color: var(--color-ok);
+  line-height: 1.2;
 }
 
 .conn-dot {
+  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--mint-success);
-  box-shadow: 0 0 6px var(--mint-success);
+  background: var(--color-ok);
+  box-shadow: 0 0 6px var(--color-ok);
 }
 
 .conn-dot.disconnected {
-  background: var(--red-pen-dark);
-  box-shadow: 0 0 6px var(--red-pen-dark);
+  background: var(--pen-red-lit);
+  box-shadow: 0 0 6px var(--pen-red-lit);
 }
 
-.opponent-bingo-mini {
+.mini, .opponent-bingo-mini {
   display: flex;
   gap: 4px;
+  font: 500 15px var(--font-display);
 }
 
-.mini-letter {
-  width: 22px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-hand);
-  font-size: 0.85rem;
-  font-weight: 700;
+.mw, .mini-letter {
   position: relative;
+  width: 16px;
+  text-align: center;
+  color: var(--color-ink);
+  background: transparent;
 }
 
-.mini-letter.struck {
-  opacity: 0.40;
-  text-decoration: line-through;
-  color: var(--red-pen-dark);
+.mw.s, .mini-letter.struck {
+  color: var(--color-muted);
 }
 
-/* GAME INFO STRIP (Turn indicator & Deadline timer) */
-.game-info-strip {
+.mw.s::after, .mini-letter.struck::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: var(--pen-red-lit);
+  transform: rotate(-34deg);
+}
+
+/* GAME INFO STRIP (Turn indicator & Recent Calls) */
+.turn, .game-info-strip {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.95rem;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 4px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .turn-pill {
@@ -671,45 +730,40 @@ body {
 }
 
 .turn-pill.my-turn {
-  color: var(--mint-success);
+  color: var(--color-ok);
 }
 
 .turn-pill.friend-turn {
-  color: var(--gold-top);
+  color: var(--color-accent);
 }
 
 .turn-timer-clock {
   font-variant-numeric: tabular-nums;
-  color: var(--gold-top);
-  font-weight: 800;
-}
-
-/* Called Numbers Strip */
-.called-numbers-strip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  padding: 4px 0;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-}
-
-.called-num-badge {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-hand);
+  color: var(--color-accent);
   font-weight: 700;
-  color: var(--text-white);
-  flex-shrink: 0;
 }
 
-/* CENTRAL BINGO BUTTON (Directly Below Grid per Section 6) */
+.calls, .called-numbers-strip {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.calls b, .called-num-badge {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: var(--color-paper-3);
+  border: 1px solid var(--color-rule);
+  font: 700 15px/24px var(--font-hand);
+  text-align: center;
+  color: var(--color-ink);
+  box-shadow: var(--edge-light);
+  display: inline-block;
+}
+
+/* CENTRAL BINGO BUTTON */
 .bingo-button-container {
   display: flex;
   justify-content: center;
@@ -717,58 +771,90 @@ body {
   margin-top: 4px;
 }
 
-.bingo-center-btn {
-  width: 100%;
-  max-width: 320px;
-  min-height: 56px;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-ui);
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  border: none;
+.btn.bingo, .bingo-center-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  position: relative;
+  gap: 12px;
+  width: min(78%, 280px);
+  min-height: 64px;
+  margin: 22px auto 0;
+  font: 500 28px/1 var(--font-display);
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  background: linear-gradient(var(--color-paper-3), var(--color-paper-2));
+  box-shadow: var(--edge-light), var(--shadow-part);
+  color: var(--color-ink);
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* State: Locked */
-.bingo-center-btn.locked {
-  background: rgba(255, 255, 255, 0.10);
-  color: var(--text-muted);
-  opacity: 0.5;
-  cursor: not-allowed;
+.btn.bingo:disabled, .bingo-center-btn:disabled, .bingo-center-btn.locked {
+  color: var(--color-muted);
+  cursor: default;
+  opacity: 0.8;
 }
 
-/* State: Ready (Pulsing Glow per Section 5) */
-.bingo-center-btn.ready {
-  background: linear-gradient(135deg, var(--gold-top), var(--gold-bottom));
-  color: var(--ink-paper); /* Label in Night Indigo per Section 5 */
+.btn.bingo.on, .bingo-center-btn.ready {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: var(--edge-light), var(--glow);
+  cursor: pointer;
   opacity: 1;
-  box-shadow: 0 0 25px var(--gold-glow), 0 4px 15px rgba(255, 159, 28, 0.5);
-  animation: readyGlowPulse 1.4s infinite alternate ease-in-out;
 }
 
-@keyframes readyGlowPulse {
-  0% {
-    transform: scale(1.02);
-    box-shadow: 0 0 16px var(--gold-glow);
-  }
-  100% {
-    transform: scale(1.06);
-    box-shadow: 0 0 32px var(--gold-glow), 0 0 48px rgba(255, 159, 28, 0.6);
+.btn.bingo.on::after, .bingo-center-btn.ready::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 2px solid var(--color-accent);
+  border-radius: 999px;
+  animation: pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.btn.bingo.on .pips, .bingo-center-btn.ready .pips {
+  display: none;
+}
+
+.pips {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.pips i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-muted);
+  display: inline-block;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.pips i.f {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.bingo.on::after, .bingo-center-btn.ready::after {
+    animation: none;
+    opacity: 0.6;
   }
 }
 
 .bingo-center-btn.submitting {
   background: rgba(255, 255, 255, 0.2);
-  color: var(--text-white);
+  color: var(--color-ink);
   cursor: wait;
 }
 
