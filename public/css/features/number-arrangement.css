@@ -23,7 +23,8 @@
 #screen-arrange .board-game-container {
   flex: 1;
   min-height: 0;
-  max-height: min(84vw, calc(100% - 130px), 360px);
+  max-height: min(88vw, calc(100% - 130px), 440px);
+  width: min(88vw, calc(100% - 130px), 440px);
   aspect-ratio: 1 / 1;
   margin: auto;
   position: relative;
@@ -34,7 +35,7 @@
 
 .board-game-container {
   width: 100%;
-  max-width: 380px;
+  max-width: 440px;
   margin: 0 auto;
   position: relative;
   display: flex;
@@ -65,29 +66,32 @@
 
 .number-tile {
   background: #FFFFFF;
-  border: 1.5px solid var(--card-border);
-  border-radius: var(--radius-sm);
+  border: 2px solid var(--card-border);
+  border-bottom: 3.5px solid #CBD5E1;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: clamp(1rem, 4vw, 1.35rem);
+  font-size: clamp(1.2rem, 4vw, 1.7rem);
   font-weight: 900;
-  color: var(--text-dark);
-  box-shadow: var(--shadow-tile);
+  color: #0F172A;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   cursor: pointer;
   position: relative;
   transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.15s ease;
   user-select: none;
+  aspect-ratio: 1 / 1;
 }
 
 .number-tile:hover {
-  filter: brightness(1.02);
+  filter: brightness(1.03);
+  border-color: var(--primary-blue);
 }
 
 .number-tile:active {
-  transform: translateY(3px);
-  box-shadow: var(--shadow-tile-active);
+  transform: translateY(2px);
+  border-bottom-width: 1.5px;
 }
 
 /* Selected cell for swapping in arrange mode */

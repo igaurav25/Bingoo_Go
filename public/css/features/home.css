@@ -175,19 +175,26 @@
 .modes-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
+}
+
+@media (min-width: 600px) {
+  .modes-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
 }
 
 .mode-card {
   background: #FFFFFF;
   border: 1.5px solid var(--card-border);
   border-radius: var(--radius-md);
-  padding: 10px 10px;
+  padding: 12px 12px;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -205,27 +212,27 @@
 }
 
 .mode-icon-circle {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
 }
 
 .mode-title {
   font-family: var(--font-display);
-  font-size: 0.9rem;
+  font-size: 1.02rem;
   font-weight: 800;
   color: var(--text-dark);
 }
 
 .mode-desc {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  line-height: 1.2;
+  line-height: 1.25;
 }
   align-items: center;
   justify-content: center;

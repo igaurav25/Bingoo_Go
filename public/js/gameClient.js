@@ -25,7 +25,7 @@
  * - Server-authoritative validation & real-time sync
  */
 
-import { generateRandomGrid, validateGridArrangement } from '/shared/lineModel.js';
+import { generateRandomGrid, validateGridArrangement, findCompletedLines } from '/shared/lineModel.js';
 import { AnimationQueue } from './animationQueue.js';
 import { RenderOverlay } from './renderOverlay.js';
 import { soundManager } from './audio.js';
@@ -53,14 +53,36 @@ class BingoApp {
     this.lastReactionSentAt = 0;
     this.coinBalance = 500;
 
-    // Arcade Modes State
+    // Arcade & Playable Modes State
     this.selectedBotDifficulty = 'easy';
     this.timeChallengeSeconds = 60;
     this.timeChallengeInterval = null;
     this.survivalRound = 1;
     this.survivalTimerInterval = null;
     this.isOfflineMode = false;
-    this.passAndPlayTurn = 1;
+    this.isPassAndPlay = false;
+    this.isPracticeBotMode = false;
+    this.isTeam2v2 = false;
+    this.isTournamentMatchMode = false;
+    this.currentTournamentType = null;
+    this.passAndPlayCurrentPlayer = 1;
+    this.passAndPlayGrid1 = null;
+    this.passAndPlayGrid2 = null;
+    this.passAndPlayLines1 = [];
+    this.passAndPlayLines2 = [];
+    this.botGrid = null;
+    this.botCompletedLines = [];
+    this.botDifficulty = 'easy';
+    this.botThinkingTimer = null;
+    this.isMyTurn = true;
+
+    // Tournament Progress State
+    this.knockoutRoundIndex = 0;
+    this.leagueFixtureIndex = 0;
+    this.friendsLeagueFixtureIndex = 0;
+    this.friendsKoRoundIndex = 0;
+    this.friendsHybridFixtureIndex = 0;
+    this.friendsHybridStage = 'LEAGUE';
 
     // Subsystems
     this.dom = this._cacheDOM();
@@ -76,6 +98,7 @@ class BingoApp {
     this._bindEvents();
     this._applySettings();
     this._connectWebSocket();
+    this._initDefaultModeData();
     this._handleRoute();
   }
 
@@ -185,7 +208,12 @@ class BingoApp {
       btnStartTeam2v2: document.getElementById('btn-start-team-2v2'),
       friendsDirectoryList: document.getElementById('friends-directory-list'),
       btnEnterModeKnockout: document.getElementById('btn-enter-mode-knockout'),
+      btnPlayModeKoMatch: document.getElementById('btn-play-mode-ko-match'),
+      modeKoFixtureText: document.getElementById('mode-ko-fixture-text'),
+      knockoutModeBracket: document.getElementById('knockout-mode-bracket'),
       modeLeagueTable: document.getElementById('mode-league-table'),
+      btnPlayLeagueMatch: document.getElementById('btn-play-league-match'),
+      leagueCurrentFixtureText: document.getElementById('league-current-fixture-text'),
       botDiffCards: document.querySelectorAll('.bot-diff-card'),
       btnStartPracticeBotDuel: document.getElementById('btn-start-practice-bot-duel'),
       btnOfflinePassAndPlay: document.getElementById('btn-offline-pass-and-play'),
@@ -200,6 +228,22 @@ class BingoApp {
       btnHostFriendsKoCta: document.getElementById('btn-host-friends-ko-cta'),
       btnHostFriendsHybridCta: document.getElementById('btn-host-friends-hybrid-cta'),
       friendsLeagueTableBody: document.querySelector('#friends-league-table-body tbody') || document.getElementById('friends-league-table-body'),
+      btnCreateFriendsLeague: document.getElementById('btn-create-friends-league'),
+      btnPlayFriendsLeagueMatch: document.getElementById('btn-play-friends-league-match'),
+      friendsLeagueFixtureText: document.getElementById('friends-league-fixture-text'),
+      friendsLeagueSizeChips: document.querySelectorAll('.friends-league-size-chip'),
+      friendsLeaguePtsChips: document.querySelectorAll('.friends-league-pts-chip'),
+      btnCreateFriendsKnockout: document.getElementById('btn-create-friends-knockout'),
+      btnPlayFriendsKoMatch: document.getElementById('btn-play-friends-ko-match'),
+      friendsKoRoundText: document.getElementById('friends-ko-round-text'),
+      friendsKoSizeChips: document.querySelectorAll('.friends-ko-size-chip'),
+      friendsKnockoutBracket: document.getElementById('friends-knockout-bracket'),
+      btnCreateFriendsHybrid: document.getElementById('btn-create-friends-hybrid'),
+      btnPlayFriendsHybridMatch: document.getElementById('btn-play-friends-hybrid-match'),
+      friendsHybridFixtureText: document.getElementById('friends-hybrid-fixture-text'),
+      friendsHybridStageLabel: document.getElementById('friends-hybrid-stage-label'),
+      friendsHybridTable: document.getElementById('friends-hybrid-table'),
+      friendsHybridSizeChips: document.querySelectorAll('.friends-hybrid-size-chip'),
 
       // Lobby
       lobbyCodeText: document.getElementById('lobby-code-text'),
@@ -225,6 +269,7 @@ class BingoApp {
       btnLockBoard: document.getElementById('btn-lock-board'),
 
       // Game
+      btnGameplayExit: document.getElementById('btn-gameplay-exit'),
       gameOppAvatar: document.getElementById('game-opp-avatar'),
       gameOppName: document.getElementById('game-opp-name'),
       opponentConnDot: document.getElementById('opponent-conn-dot'),
@@ -328,6 +373,12 @@ class BingoApp {
       modalConfirmExit: document.getElementById('modal-confirm-exit'),
       btnConfirmForfeitExit: document.getElementById('btn-confirm-forfeit-exit'),
 
+      // Pass & Play Modal
+      modalPassPhone: document.getElementById('modal-pass-phone'),
+      passPhoneTitle: document.getElementById('pass-phone-title'),
+      passPhoneDesc: document.getElementById('pass-phone-desc'),
+      btnPassPhoneReady: document.getElementById('btn-pass-phone-ready'),
+
       modalCloseBtns: document.querySelectorAll('.modal-close'),
       toastContainer: document.getElementById('toast-container'),
       announcer: document.getElementById('aria-live-announcer')
@@ -360,10 +411,38 @@ class BingoApp {
           this._send('leave_room');
           this.currentRoom = null;
         }
+        this.isOfflineMode = false;
+        this.isPracticeBotMode = false;
+        this.isTournamentMatchMode = false;
+        this.isPassAndPlay = false;
+        this.isTeam2v2 = false;
         this._stopTimers();
-        const dest = this.pendingExitScreen || 'home';
+        clearTimeout(this.botThinkingTimer);
+        const dest = this.pendingExitScreen || 'modes-hub';
         this.pendingExitScreen = null;
+        this.showToast('Match forfeited.');
         this._showScreen(dest);
+      });
+    }
+
+    // Active Gameplay Exit Button Handler
+    if (this.dom.btnGameplayExit) {
+      this.dom.btnGameplayExit.addEventListener('click', () => {
+        if (this.status === 'playing' || this.status === 'arranging') {
+          this.pendingExitScreen = 'modes-hub';
+          if (this.dom.modalConfirmExit) {
+            this.dom.modalConfirmExit.classList.remove('hidden');
+          }
+        } else {
+          this.navigateTo('modes-hub');
+        }
+      });
+    }
+
+    // Pass & Play Modal Action
+    if (this.dom.btnPassPhoneReady) {
+      this.dom.btnPassPhoneReady.addEventListener('click', () => {
+        this.onPassPhoneReady();
       });
     }
 
@@ -543,15 +622,31 @@ class BingoApp {
     // Mode 3: 2v2 Team Battle
     if (this.dom.btnStartTeam2v2) {
       this.dom.btnStartTeam2v2.addEventListener('click', () => {
-        this.showToast('🛡️ Searching for 2v2 Team lobby...');
-        this.startQuickMatch();
+        this.startTeam2v2Match();
       });
     }
 
-    // Mode 5 & 6 Tournaments
+    // Mode 5: Cobalt Cup Knockout
     if (this.dom.btnEnterModeKnockout) {
       this.dom.btnEnterModeKnockout.addEventListener('click', () => {
-        this.startQuickMatch();
+        if (this.coinBalance >= 100) {
+          this.coinBalance -= 100;
+          this._updateWalletUI(this.coinBalance);
+          this.showToast('100 🪙 entry paid! Knockout bracket ready.', 'success');
+        }
+        this.playKnockoutRoundMatch();
+      });
+    }
+    if (this.dom.btnPlayModeKoMatch) {
+      this.dom.btnPlayModeKoMatch.addEventListener('click', () => {
+        this.playKnockoutRoundMatch();
+      });
+    }
+
+    // Mode 6: Premier League Fixtures
+    if (this.dom.btnPlayLeagueMatch) {
+      this.dom.btnPlayLeagueMatch.addEventListener('click', () => {
+        this.playLeagueFixtureMatch();
       });
     }
 
@@ -565,20 +660,19 @@ class BingoApp {
     });
     if (this.dom.btnStartPracticeBotDuel) {
       this.dom.btnStartPracticeBotDuel.addEventListener('click', () => {
-        this._unlockAudio();
-        this.startQuickMatch();
+        this.startPracticeBotMatch(this.selectedBotDifficulty || 'easy');
       });
     }
 
     // Mode 8: Offline Mode
     if (this.dom.btnOfflinePassAndPlay) {
       this.dom.btnOfflinePassAndPlay.addEventListener('click', () => {
-        this.startOfflineMatch(true);
+        this.startPassAndPlayMatch();
       });
     }
     if (this.dom.btnOfflineBot) {
       this.dom.btnOfflineBot.addEventListener('click', () => {
-        this.startOfflineMatch(false);
+        this.startPracticeBotMatch('medium');
       });
     }
 
@@ -604,29 +698,78 @@ class BingoApp {
       });
     }
 
-    // Mode 11, 12, 13 CTAs
+    // Mode 11: Friends League (IPL)
+    this.dom.friendsLeagueSizeChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.dom.friendsLeagueSizeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+    this.dom.friendsLeaguePtsChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.dom.friendsLeaguePtsChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+    if (this.dom.btnCreateFriendsLeague) {
+      this.dom.btnCreateFriendsLeague.addEventListener('click', () => {
+        this.createFriendsLeague();
+      });
+    }
+    if (this.dom.btnPlayFriendsLeagueMatch) {
+      this.dom.btnPlayFriendsLeagueMatch.addEventListener('click', () => {
+        this.playFriendsLeagueMatch();
+      });
+    }
     if (this.dom.btnHostFriendsLeagueCta) {
       this.dom.btnHostFriendsLeagueCta.addEventListener('click', () => {
-        this.navigateTo('mode-private-room');
-        this.dom.tabRoomTournament?.click();
-        const fChip = document.querySelector('.tourn-format-chip[data-format="LEAGUE"]');
-        if (fChip) fChip.click();
+        this.createFriendsLeague();
+      });
+    }
+
+    // Mode 12: Friends Knockout
+    this.dom.friendsKoSizeChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.dom.friendsKoSizeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+    if (this.dom.btnCreateFriendsKnockout) {
+      this.dom.btnCreateFriendsKnockout.addEventListener('click', () => {
+        this.createFriendsKnockout();
+      });
+    }
+    if (this.dom.btnPlayFriendsKoMatch) {
+      this.dom.btnPlayFriendsKoMatch.addEventListener('click', () => {
+        this.playFriendsKoMatch();
       });
     }
     if (this.dom.btnHostFriendsKoCta) {
       this.dom.btnHostFriendsKoCta.addEventListener('click', () => {
-        this.navigateTo('mode-private-room');
-        this.dom.tabRoomTournament?.click();
-        const fChip = document.querySelector('.tourn-format-chip[data-format="KNOCKOUT"]');
-        if (fChip) fChip.click();
+        this.createFriendsKnockout();
+      });
+    }
+
+    // Mode 13: Friends Hybrid
+    this.dom.friendsHybridSizeChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        this.dom.friendsHybridSizeChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+    if (this.dom.btnCreateFriendsHybrid) {
+      this.dom.btnCreateFriendsHybrid.addEventListener('click', () => {
+        this.createFriendsHybrid();
+      });
+    }
+    if (this.dom.btnPlayFriendsHybridMatch) {
+      this.dom.btnPlayFriendsHybridMatch.addEventListener('click', () => {
+        this.playFriendsHybridMatch();
       });
     }
     if (this.dom.btnHostFriendsHybridCta) {
       this.dom.btnHostFriendsHybridCta.addEventListener('click', () => {
-        this.navigateTo('mode-private-room');
-        this.dom.tabRoomTournament?.click();
-        const fChip = document.querySelector('.tourn-format-chip[data-format="HYBRID"]');
-        if (fChip) fChip.click();
+        this.createFriendsHybrid();
       });
     }
 
@@ -755,10 +898,31 @@ class BingoApp {
         this.dom.btnLockBoard.disabled = true;
 
         if (this.isOfflineMode) {
+          if (this.isPassAndPlay) {
+            if (this.passAndPlayCurrentPlayer === 1) {
+              this.passAndPlayGrid1 = [...this.grid];
+              if (this.dom.passPhoneTitle) this.dom.passPhoneTitle.textContent = 'Pass Phone to Player 2';
+              if (this.dom.passPhoneDesc) this.dom.passPhoneDesc.textContent = 'Player 1 locked board! Pass device to Player 2 to arrange their 5x5 board.';
+              if (this.dom.modalPassPhone) this.dom.modalPassPhone.classList.remove('hidden');
+              return;
+            } else {
+              this.passAndPlayGrid2 = [...this.grid];
+              this.passAndPlayCurrentPlayer = 1;
+              this.grid = [...this.passAndPlayGrid1];
+              this.status = 'playing';
+              this._showScreen('playing');
+              this._renderGameGrid();
+              this._updateTurnBannerLocal(true, 'Player 1');
+              this.showToast('Pass & Play Started! Player 1 turn', 'success');
+              return;
+            }
+          }
+
           this.status = 'playing';
           this._showScreen('playing');
           this._renderGameGrid();
-          this.showToast('Offline Match Started!', 'success');
+          this._updateTurnBannerLocal(true);
+          this.showToast('Match Started! Your turn to call.', 'success');
         } else {
           this._send('lock_board', { grid: this.grid });
           this.showToast(t('boardLocked'));
@@ -790,6 +954,25 @@ class BingoApp {
     // Rematch & Leave
     if (this.dom.btnRematch) {
       this.dom.btnRematch.addEventListener('click', () => {
+        if (this.isOfflineMode) {
+          if (this.isPassAndPlay) {
+            this.startPassAndPlayMatch();
+          } else if (this.isPracticeBotMode) {
+            this.startPracticeBotMatch(this.selectedBotDifficulty || 'easy');
+          } else if (this.isTournamentMatchMode) {
+            if (this.currentTournamentType === 'KNOCKOUT') this.playKnockoutRoundMatch();
+            else if (this.currentTournamentType === 'LEAGUE') this.playLeagueFixtureMatch();
+            else if (this.currentTournamentType === 'FRIENDS_LEAGUE') this.playFriendsLeagueMatch();
+            else if (this.currentTournamentType === 'FRIENDS_KNOCKOUT') this.playFriendsKoMatch();
+            else if (this.currentTournamentType === 'FRIENDS_HYBRID') this.playFriendsHybridMatch();
+            else this.startPracticeBotMatch('medium');
+          } else if (this.isTeam2v2) {
+            this.startTeam2v2Match();
+          } else {
+            this.startPracticeBotMatch('medium');
+          }
+          return;
+        }
         this.dom.btnRematch.disabled = true;
         this.dom.btnRematch.textContent = t('rematchRequested');
         this._send('request_rematch');
@@ -1252,28 +1435,567 @@ class BingoApp {
   }
 
   /**
-   * Offline Mode (Mode 8)
+   * Helper: initializes local match state and navigates to board arrangement
    */
-  startOfflineMatch(isPassAndPlay = false) {
+  _setupLocalMatch(opponentName, opponentAvatar, modeTitle) {
     this._unlockAudio();
     this.isOfflineMode = true;
-    this.passAndPlayTurn = 1;
-    this.currentRoom = {
-      code: 'LOCAL',
-      players: [
-        { id: this.playerId, name: isPassAndPlay ? 'Player 1' : this.nickname, avatar: this.avatar },
-        { id: 'p2-local', name: isPassAndPlay ? 'Player 2' : '🤖 Local Bot', avatar: isPassAndPlay ? '🐻' : '🤖' }
-      ],
-      match: { currentTurnPlayerId: this.playerId }
-    };
-
-    this.grid = generateRandomGrid();
     this.markedNumbers.clear();
     this.completedLines = [];
     this.renderOverlay.clear();
+    this.isMyTurn = true;
+    this.botCompletedLines = [];
+    this.botGrid = generateRandomGrid();
+    this.grid = generateRandomGrid();
+    this.selectedCellIndex = null;
+    this.isLocked = false;
+
+    if (this.dom.gameOppName) this.dom.gameOppName.textContent = opponentName;
+    if (this.dom.gameOppAvatar) this.dom.gameOppAvatar.textContent = opponentAvatar;
+    if (this.dom.opponentConnDot) this.dom.opponentConnDot.className = 'conn-dot';
+    this._updateOpponentMiniBingo(0);
+    this._updateClaimButtonState();
+    if (this.dom.calledNumbersStrip) {
+      this.dom.calledNumbersStrip.innerHTML = '<span style="font-size:0.75rem; font-weight:800; color:var(--text-secondary); margin-right:2px;">Calls:</span>';
+    }
+
     this._showScreen('arranging');
     this._renderArrangeGrid();
-    this.showToast(isPassAndPlay ? 'Pass & Play: Player 1 arrange card' : 'Offline Match vs Local AI', 'info');
+    if (this.dom.btnLockBoard) this.dom.btnLockBoard.disabled = false;
+    this.showToast(`${modeTitle}: Arrange your board & lock`, 'info');
+  }
+
+  /**
+   * AI Bot turn calculation heuristic
+   */
+  _chooseBotMove(difficulty = 'easy') {
+    const uncalled = [];
+    for (let i = 1; i <= 25; i++) {
+      if (!this.markedNumbers.has(i)) uncalled.push(i);
+    }
+    if (uncalled.length === 0) return 1;
+
+    if (difficulty === 'easy' || !this.botGrid) {
+      return uncalled[Math.floor(Math.random() * uncalled.length)];
+    }
+
+    const scores = new Map();
+    uncalled.forEach(n => scores.set(n, 1));
+
+    // Rows
+    for (let r = 0; r < 5; r++) {
+      const row = this.botGrid.slice(r * 5, (r + 1) * 5);
+      const markedCount = row.filter(n => this.markedNumbers.has(n)).length;
+      const weight = difficulty === 'hard' ? Math.pow(3, markedCount) : Math.pow(2, markedCount);
+      row.forEach(n => {
+        if (!this.markedNumbers.has(n)) {
+          scores.set(n, (scores.get(n) || 0) + weight);
+        }
+      });
+    }
+
+    // Cols
+    for (let c = 0; c < 5; c++) {
+      const col = [this.botGrid[c], this.botGrid[c + 5], this.botGrid[c + 10], this.botGrid[c + 15], this.botGrid[c + 20]];
+      const markedCount = col.filter(n => this.markedNumbers.has(n)).length;
+      const weight = difficulty === 'hard' ? Math.pow(3, markedCount) : Math.pow(2, markedCount);
+      col.forEach(n => {
+        if (!this.markedNumbers.has(n)) {
+          scores.set(n, (scores.get(n) || 0) + weight);
+        }
+      });
+    }
+
+    let bestNum = uncalled[0];
+    let maxScore = -1;
+    for (const [num, score] of scores.entries()) {
+      if (score > maxScore) {
+        maxScore = score;
+        bestNum = num;
+      }
+    }
+    return bestNum;
+  }
+
+  /**
+   * Applies called number to local match boards
+   */
+  _applyLocalNumber(num, caller) {
+    this.markedNumbers.add(num);
+
+    // Update player's board tile
+    if (this.dom.gameGridBoard) {
+      const cell = this.dom.gameGridBoard.querySelector(`[data-number="${num}"]`);
+      if (cell) cell.classList.add('marked', 'm');
+    }
+
+    // Add to recent calls strip
+    if (this.dom.calledNumbersStrip) {
+      const chip = document.createElement('span');
+      chip.className = 'call-chip';
+      chip.textContent = String(num);
+      if (caller === 'bot') chip.style.background = 'var(--coral-light)';
+      this.dom.calledNumbersStrip.appendChild(chip);
+      if (this.dom.calledNumbersStrip.children.length > 7) {
+        this.dom.calledNumbersStrip.children[1]?.remove();
+      }
+    }
+
+    soundManager.playMark();
+    this._vibrate(40);
+
+    // Check Player completed lines
+    this._checkLocalCompletedLines();
+
+    // Check Bot completed lines
+    if (this.botGrid) {
+      const botLines = findCompletedLines(this.botGrid, this.markedNumbers);
+      this.botCompletedLines = botLines;
+      this._updateOpponentMiniBingo(botLines.length);
+    }
+  }
+
+  _updateTurnBannerLocal(isMyTurn, oppName = 'Opponent') {
+    if (this.dom.turnIndicatorPill) {
+      this.dom.turnIndicatorPill.className = `turn-badge ${isMyTurn ? 'my-turn' : 'friend-turn'}`;
+    }
+    if (this.dom.turnText) {
+      this.dom.turnText.textContent = isMyTurn ? (t('yourTurn') || 'Your turn') : `${oppName} thinking...`;
+    }
+  }
+
+  /**
+   * Pass & Play Call Handler
+   */
+  _handlePassAndPlayCall(num) {
+    this.markedNumbers.add(num);
+    soundManager.playMark();
+    this._vibrate(40);
+
+    const cell = this.dom.gameGridBoard?.querySelector(`[data-number="${num}"]`);
+    if (cell) cell.classList.add('marked', 'm');
+
+    if (this.dom.calledNumbersStrip) {
+      const chip = document.createElement('span');
+      chip.className = 'call-chip';
+      chip.textContent = String(num);
+      this.dom.calledNumbersStrip.appendChild(chip);
+      if (this.dom.calledNumbersStrip.children.length > 7) {
+        this.dom.calledNumbersStrip.children[1]?.remove();
+      }
+    }
+
+    const currGrid = this.passAndPlayCurrentPlayer === 1 ? this.passAndPlayGrid1 : this.passAndPlayGrid2;
+    const completed = findCompletedLines(currGrid, this.markedNumbers);
+    if (this.passAndPlayCurrentPlayer === 1) {
+      this.passAndPlayLines1 = completed;
+    } else {
+      this.passAndPlayLines2 = completed;
+    }
+
+    this._checkLocalCompletedLines();
+
+    if (completed.length >= 5) {
+      return;
+    }
+
+    const nextPlayer = this.passAndPlayCurrentPlayer === 1 ? 2 : 1;
+    setTimeout(() => {
+      if (this.status !== 'playing') return;
+      if (this.dom.passPhoneTitle) this.dom.passPhoneTitle.textContent = `Pass Phone to Player ${nextPlayer}`;
+      if (this.dom.passPhoneDesc) this.dom.passPhoneDesc.textContent = `Player ${this.passAndPlayCurrentPlayer} called ${num}. Hand phone over to Player ${nextPlayer}.`;
+      if (this.dom.modalPassPhone) this.dom.modalPassPhone.classList.remove('hidden');
+    }, 600);
+  }
+
+  /**
+   * Pass & Play device handoff continuation
+   */
+  onPassPhoneReady() {
+    if (this.dom.modalPassPhone) this.dom.modalPassPhone.classList.add('hidden');
+
+    if (this.status === 'arranging') {
+      this.passAndPlayCurrentPlayer = 2;
+      this.grid = generateRandomGrid();
+      this.selectedCellIndex = null;
+      this.isLocked = false;
+      if (this.dom.btnLockBoard) this.dom.btnLockBoard.disabled = false;
+      this._renderArrangeGrid();
+      this.showToast('Player 2: Arrange your board & lock');
+      return;
+    }
+
+    this.passAndPlayCurrentPlayer = this.passAndPlayCurrentPlayer === 1 ? 2 : 1;
+    this.grid = this.passAndPlayCurrentPlayer === 1 ? this.passAndPlayGrid1 : this.passAndPlayGrid2;
+    this.completedLines = this.passAndPlayCurrentPlayer === 1 ? [...this.passAndPlayLines1] : [...this.passAndPlayLines2];
+
+    if (this.dom.gameOppName) this.dom.gameOppName.textContent = this.passAndPlayCurrentPlayer === 1 ? 'Player 2' : 'Player 1';
+    if (this.dom.gameOppAvatar) this.dom.gameOppAvatar.textContent = this.passAndPlayCurrentPlayer === 1 ? '🐻' : '🦊';
+    const oppLines = this.passAndPlayCurrentPlayer === 1 ? this.passAndPlayLines2.length : this.passAndPlayLines1.length;
+    this._updateOpponentMiniBingo(oppLines);
+
+    this.renderOverlay.clear();
+    this._renderGameGrid();
+
+    for (let i = 0; i < this.completedLines.length; i++) {
+      const lineId = this.completedLines[i];
+      const isRow = lineId.startsWith('r');
+      const idx = Number(lineId.replace(/[^\d]/g, ''));
+      const lineInfo = {
+        id: lineId,
+        type: isRow ? 'ROW' : 'COL',
+        index: idx,
+        order: i + 1,
+        letter: 'BINGO'[i]
+      };
+      this.renderOverlay.animateLineStrike(lineInfo, true);
+    }
+
+    this._updateTurnBannerLocal(true, `Player ${this.passAndPlayCurrentPlayer}`);
+    this._updateClaimButtonState();
+  }
+
+  /**
+   * Mode 3: 2v2 Team Battle
+   */
+  startTeam2v2Match() {
+    this.isTeam2v2 = true;
+    this.isTournamentMatchMode = false;
+    this.isPracticeBotMode = false;
+    this.isPassAndPlay = false;
+    this.botDifficulty = 'medium';
+    this._setupLocalMatch('Team Orange (🐻+🐱)', '🐻', '2v2 Team Battle');
+  }
+
+  /**
+   * Mode 4: Friend Challenge 1v1 Duel
+   */
+  startFriendDuel(friend) {
+    this._unlockAudio();
+    this._showMatchFoundVS(friend.name);
+    setTimeout(() => {
+      this.isTournamentMatchMode = false;
+      this.isPracticeBotMode = true;
+      this.isPassAndPlay = false;
+      this.isTeam2v2 = false;
+      this.botDifficulty = 'medium';
+      this._setupLocalMatch(`${friend.name} (${friend.rank || 'Gold'})`, friend.avatar, `Duel vs ${friend.name}`);
+    }, 1400);
+  }
+
+  /**
+   * Mode 5: Cobalt Cup Knockout Tournament
+   */
+  playKnockoutRoundMatch() {
+    const rounds = ['Quarterfinal', 'Semifinal', 'Grand Final'];
+    const opps = [
+      { name: 'QuantumBingo', avatar: '⚡' },
+      { name: 'CyberNeon', avatar: '🦊' },
+      { name: 'AstroViper', avatar: '👑' }
+    ];
+    const rIdx = Math.min(this.knockoutRoundIndex, 2);
+    const opp = opps[rIdx];
+
+    this.isTournamentMatchMode = true;
+    this.currentTournamentType = 'KNOCKOUT';
+    this.isPracticeBotMode = false;
+    this.isPassAndPlay = false;
+    this.botDifficulty = rIdx === 0 ? 'easy' : (rIdx === 1 ? 'medium' : 'hard');
+
+    this._setupLocalMatch(`${opp.name} (${opp.avatar})`, opp.avatar, `Knockout ${rounds[rIdx]}`);
+  }
+
+  /**
+   * Mode 6: Premier Bingo League
+   */
+  playLeagueFixtureMatch() {
+    const opps = [
+      { name: 'CyberNeon', avatar: '🦊' },
+      { name: 'PixelStriker', avatar: '🎮' },
+      { name: 'QuantumBingo', avatar: '⚡' },
+      { name: 'AstroViper', avatar: '🚀' },
+      { name: 'ThunderBolt', avatar: '⚡' },
+      { name: 'ShadowRacer', avatar: '🥷' },
+      { name: 'ViperKing', avatar: '👑' }
+    ];
+    const opp = opps[this.leagueFixtureIndex % opps.length];
+    this.isTournamentMatchMode = true;
+    this.currentTournamentType = 'LEAGUE';
+    this.isPracticeBotMode = false;
+    this.isPassAndPlay = false;
+    this.botDifficulty = 'medium';
+
+    this._setupLocalMatch(`${opp.name} (${opp.avatar})`, opp.avatar, `Premier League Match ${this.leagueFixtureIndex + 1}`);
+  }
+
+  /**
+   * Mode 7: Practice vs Bot
+   */
+  startPracticeBotMatch(difficulty = 'easy') {
+    this.isPracticeBotMode = true;
+    this.isTournamentMatchMode = false;
+    this.isPassAndPlay = false;
+    this.isTeam2v2 = false;
+    this.botDifficulty = difficulty;
+
+    this._setupLocalMatch(`AI Bot (${difficulty.toUpperCase()})`, '🤖', `Practice Bot (${difficulty.toUpperCase()})`);
+  }
+
+  /**
+   * Mode 8: Pass & Play
+   */
+  startPassAndPlayMatch() {
+    this._unlockAudio();
+    this.isOfflineMode = true;
+    this.isPassAndPlay = true;
+    this.isPracticeBotMode = false;
+    this.isTournamentMatchMode = false;
+    this.isTeam2v2 = false;
+    this.passAndPlayCurrentPlayer = 1;
+    this.passAndPlayGrid1 = null;
+    this.passAndPlayGrid2 = null;
+    this.passAndPlayLines1 = [];
+    this.passAndPlayLines2 = [];
+    this.markedNumbers.clear();
+    this.completedLines = [];
+    this.renderOverlay.clear();
+
+    this.grid = generateRandomGrid();
+    this.selectedCellIndex = null;
+    this.isLocked = false;
+    this._showScreen('arranging');
+    this._renderArrangeGrid();
+    if (this.dom.btnLockBoard) this.dom.btnLockBoard.disabled = false;
+    this.showToast('Player 1: Arrange your board & lock', 'info');
+  }
+
+  /**
+   * Mode 11: Friends IPL League
+   */
+  createFriendsLeague() {
+    this.friendsLeagueFixtureIndex = 0;
+    this.showToast('Friends IPL League created! Fixtures generated.', 'success');
+    if (this.dom.friendsLeagueFixtureText) {
+      this.dom.friendsLeagueFixtureText.textContent = 'Fixture 1: You vs CyberNeon';
+    }
+  }
+
+  playFriendsLeagueMatch() {
+    const opps = ['CyberNeon', 'PixelStriker', 'QuantumBingo', 'AstroViper'];
+    const opp = opps[this.friendsLeagueFixtureIndex % opps.length];
+    this.isTournamentMatchMode = true;
+    this.currentTournamentType = 'FRIENDS_LEAGUE';
+    this.botDifficulty = 'medium';
+    this._setupLocalMatch(`${opp} (Friend)`, '👥', `Friends League Match ${this.friendsLeagueFixtureIndex + 1}`);
+  }
+
+  /**
+   * Mode 12: Friends Elimination Cup
+   */
+  createFriendsKnockout() {
+    this.friendsKoRoundIndex = 0;
+    this.showToast('Friends Knockout bracket initialized!', 'success');
+    if (this.dom.friendsKoRoundText) {
+      this.dom.friendsKoRoundText.textContent = 'Quarterfinal: You vs AstroViper';
+    }
+  }
+
+  playFriendsKoMatch() {
+    const opps = ['AstroViper', 'ShadowRacer', 'QuantumBingo'];
+    const opp = opps[Math.min(this.friendsKoRoundIndex, 2)];
+    this.isTournamentMatchMode = true;
+    this.currentTournamentType = 'FRIENDS_KNOCKOUT';
+    this.botDifficulty = 'medium';
+    this._setupLocalMatch(`${opp} (Friend)`, '🏆', `Friends Bracket Round ${this.friendsKoRoundIndex + 1}`);
+  }
+
+  /**
+   * Mode 13: Friends Hybrid Tournament
+   */
+  createFriendsHybrid() {
+    this.friendsHybridFixtureIndex = 0;
+    this.friendsHybridStage = 'LEAGUE';
+    this.showToast('Friends Hybrid Tournament launched! Stage 1: League Stage', 'success');
+  }
+
+  playFriendsHybridMatch() {
+    const opps = ['ShadowRacer', 'ThunderBolt', 'PixelStriker', 'ViperKing'];
+    const opp = opps[this.friendsHybridFixtureIndex % opps.length];
+    this.isTournamentMatchMode = true;
+    this.currentTournamentType = 'FRIENDS_HYBRID';
+    this.botDifficulty = 'medium';
+    this._setupLocalMatch(`${opp} (Hybrid)`, '🌟', `Hybrid Match ${this.friendsHybridFixtureIndex + 1}`);
+  }
+
+  _updateKnockoutBracketProgress(roundIndex) {
+    const bracketContainers = [this.dom.knockoutModeBracket, this.dom.knockoutBracketContainer, this.dom.friendsKnockoutBracket];
+    bracketContainers.forEach(container => {
+      if (!container) return;
+      const qfWin = container.querySelector('.bracket-round-column:first-child .match-player-row:first-child');
+      if (qfWin) qfWin.classList.add('winner');
+      if (roundIndex >= 1) {
+        const sfWin = container.querySelector('.bracket-round-column:nth-child(2) .match-player-row:first-child');
+        if (sfWin) sfWin.classList.add('winner');
+      }
+      if (roundIndex >= 2) {
+        const finWin = container.querySelector('.bracket-round-column:nth-child(3) .match-player-row:first-child');
+        if (finWin) finWin.classList.add('winner');
+      }
+    });
+  }
+
+  _updateLeagueTableOnWin() {
+    if (!this.leagueStandings) return;
+    const userRow = this.leagueStandings.find(r => r.name === 'You');
+    if (userRow) {
+      userRow.mp += 1;
+      userRow.w += 1;
+      userRow.pts += 2;
+    }
+    this.leagueStandings.sort((a, b) => b.pts - a.pts);
+    this.leagueStandings.forEach((r, idx) => r.rank = idx + 1);
+
+    this._renderLeagueTableData(this.dom.leagueTableBody, this.leagueStandings);
+    this._renderLeagueTableData(this.dom.modeLeagueTable, this.leagueStandings);
+
+    const opps = ['CyberNeon', 'PixelStriker', 'QuantumBingo', 'AstroViper', 'ThunderBolt', 'ShadowRacer', 'ViperKing'];
+    const nextOpp = opps[this.leagueFixtureIndex % opps.length];
+    if (this.dom.leagueCurrentFixtureText) {
+      this.dom.leagueCurrentFixtureText.textContent = `Fixture ${this.leagueFixtureIndex + 1}: You vs ${nextOpp}`;
+    }
+  }
+
+  _updateFriendsLeagueTableOnWin() {
+    if (this.dom.friendsLeagueTableBody) {
+      const tbody = this.dom.friendsLeagueTableBody.querySelector('tbody') || this.dom.friendsLeagueTableBody;
+      const firstRow = tbody.querySelector('tr:first-child');
+      if (firstRow) {
+        const ptsCell = firstRow.querySelector('td:last-child');
+        if (ptsCell) {
+          const currentPts = Number(ptsCell.textContent.replace(/[^\d]/g, '')) || 0;
+          ptsCell.innerHTML = `<strong>${currentPts + 2}</strong>`;
+        }
+      }
+    }
+    const opps = ['CyberNeon', 'PixelStriker', 'QuantumBingo', 'AstroViper'];
+    const nextOpp = opps[this.friendsLeagueFixtureIndex % opps.length];
+    if (this.dom.friendsLeagueFixtureText) {
+      this.dom.friendsLeagueFixtureText.textContent = `Fixture ${this.friendsLeagueFixtureIndex + 1}: You vs ${nextOpp}`;
+    }
+  }
+
+  _renderKnockoutBracketData(container, rounds) {
+    if (!container || !rounds) return;
+    container.innerHTML = '';
+    rounds.forEach(round => {
+      const col = document.createElement('div');
+      col.className = 'bracket-round-column';
+
+      const header = document.createElement('div');
+      header.className = 'bracket-round-header';
+      header.textContent = round.name;
+      col.appendChild(header);
+
+      round.matches.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'bracket-match-card';
+        card.innerHTML = `
+          <div class="match-player-row ${m.p1.winner ? 'winner' : ''}">
+            <span>${m.p1.name}</span>
+            <span class="match-score">${m.p1.score}</span>
+          </div>
+          <div class="match-player-row ${m.p2.winner ? 'winner' : ''}">
+            <span>${m.p2.name}</span>
+            <span class="match-score">${m.p2.score}</span>
+          </div>
+        `;
+        col.appendChild(card);
+      });
+      container.appendChild(col);
+    });
+  }
+
+  _renderLeagueTableData(tableEl, standings) {
+    if (!tableEl || !standings) return;
+    const tbody = tableEl.querySelector('tbody') || tableEl;
+    tbody.innerHTML = '';
+    standings.forEach(row => {
+      const tr = document.createElement('tr');
+      if (row.name === 'You' || row.rank <= 3) {
+        tr.className = row.rank <= 3 ? 'top-tier' : 'user-row';
+      }
+      tr.innerHTML = `
+        <td><strong>${row.rank}</strong></td>
+        <td><span style="margin-right:6px;">${row.avatar}</span>${row.name}</td>
+        <td>${row.mp}</td>
+        <td>${row.w}</td>
+        <td>${row.l}</td>
+        <td><strong>${row.pts}</strong></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  _initDefaultModeData() {
+    this.friendsList = [
+      { id: 'f-1', name: 'Alex_Pro', avatar: '⚡', status: 'online', rank: 'Diamond' },
+      { id: 'f-2', name: 'Rohit_99', avatar: '🦊', status: 'online', rank: 'Gold' },
+      { id: 'f-3', name: 'LuckyStar', avatar: '⭐', status: 'in_game', rank: 'Platinum' },
+      { id: 'f-4', name: 'GameViper', avatar: '🐍', status: 'offline', rank: 'Silver' }
+    ];
+    this._renderFriendsDirectory(this.friendsList);
+
+    this.knockoutRounds = [
+      {
+        name: 'Quarterfinals',
+        matches: [
+          { p1: { name: 'You', score: 0 }, p2: { name: 'QuantumBingo', score: 0 } },
+          { p1: { name: 'CyberNeon', score: 0 }, p2: { name: 'PixelStriker', score: 0 } },
+          { p1: { name: 'AstroViper', score: 0 }, p2: { name: 'ThunderBolt', score: 0 } },
+          { p1: { name: 'ShadowRacer', score: 0 }, p2: { name: 'ViperKing', score: 0 } }
+        ]
+      },
+      {
+        name: 'Semifinals',
+        matches: [
+          { p1: { name: 'TBD', score: '-' }, p2: { name: 'TBD', score: '-' } },
+          { p1: { name: 'TBD', score: '-' }, p2: { name: 'TBD', score: '-' } }
+        ]
+      },
+      {
+        name: 'Grand Final',
+        matches: [
+          { p1: { name: 'TBD', score: '-' }, p2: { name: 'TBD', score: '-' } }
+        ]
+      }
+    ];
+    this._renderKnockoutBracketData(this.dom.knockoutBracketContainer, this.knockoutRounds);
+    this._renderKnockoutBracketData(this.dom.knockoutModeBracket, this.knockoutRounds);
+    this._renderKnockoutBracketData(this.dom.friendsKnockoutBracket, this.knockoutRounds);
+
+    this.leagueStandings = [
+      { rank: 1, avatar: '⚡', name: 'CyberNeon', mp: 1, w: 1, l: 0, pts: 2 },
+      { rank: 2, avatar: '🦊', name: 'You', mp: 0, w: 0, l: 0, pts: 0 },
+      { rank: 3, avatar: '🎮', name: 'PixelStriker', mp: 1, w: 0, l: 1, pts: 0 },
+      { rank: 4, avatar: '🚀', name: 'AstroViper', mp: 0, w: 0, l: 0, pts: 0 },
+      { rank: 5, avatar: '🥷', name: 'ShadowRacer', mp: 0, w: 0, l: 0, pts: 0 },
+      { rank: 6, avatar: '👑', name: 'ViperKing', mp: 0, w: 0, l: 0, pts: 0 }
+    ];
+    this._renderLeagueTableData(this.dom.leagueTableBody, this.leagueStandings);
+    this._renderLeagueTableData(this.dom.modeLeagueTable, this.leagueStandings);
+    this._renderLeagueTableData(this.dom.friendsLeagueTableBody, this.leagueStandings);
+    this._renderLeagueTableData(this.dom.friendsHybridTable, this.leagueStandings);
+  }
+
+  /**
+   * Offline Mode (Mode 8)
+   */
+  startOfflineMatch(isPassAndPlay = false) {
+    if (isPassAndPlay) {
+      this.startPassAndPlayMatch();
+    } else {
+      this.startPracticeBotMatch('medium');
+    }
   }
 
   /**
@@ -1657,14 +2379,56 @@ class BingoApp {
     if (this.status !== 'playing') return;
 
     if (this.isOfflineMode) {
-      // Local offline play
-      if (this.markedNumbers.has(num)) return;
-      this.markedNumbers.add(num);
-      const cell = this.dom.gameGridBoard.querySelector(`[data-number="${num}"]`);
-      if (cell) cell.classList.add('marked', 'm');
-      soundManager.playMark();
-      this._vibrate(40);
-      this._checkLocalCompletedLines();
+      if (this.markedNumbers.has(num)) {
+        this.showToast(`Number ${num} is already called.`);
+        return;
+      }
+
+      if (this.isPassAndPlay) {
+        this._handlePassAndPlayCall(num);
+        return;
+      }
+
+      if (!this.isMyTurn) {
+        this.showToast('Opponent is thinking...');
+        return;
+      }
+
+      // Player calls number
+      this._applyLocalNumber(num, 'player');
+
+      if (this.completedLines.length >= 5) {
+        // Player completed 5 lines! BINGO button ready
+        return;
+      }
+
+      // Switch turn to Bot / Teammate
+      this.isMyTurn = false;
+      this._updateTurnBannerLocal(false, this.dom.gameOppName?.textContent || 'Opponent');
+
+      clearTimeout(this.botThinkingTimer);
+      const delay = this.botDifficulty === 'hard' ? 800 : (this.botDifficulty === 'medium' ? 1200 : 1600);
+      this.botThinkingTimer = setTimeout(() => {
+        if (this.status !== 'playing') return;
+        const botNum = this._chooseBotMove(this.botDifficulty);
+        this._applyLocalNumber(botNum, 'bot');
+
+        // Check if Bot reached 5 lines
+        if (this.botCompletedLines.length >= 5) {
+          soundManager.playLineStroke(120);
+          this._stopTimers();
+          if (this.dom.resultEmoji) this.dom.resultEmoji.textContent = '👏';
+          if (this.dom.resultTitle) this.dom.resultTitle.textContent = t('defeat') || 'Defeat';
+          if (this.dom.resultDesc) this.dom.resultDesc.textContent = `${this.dom.gameOppName?.textContent || 'Opponent'} called BINGO first!`;
+          this._showScreen('finished');
+          return;
+        }
+
+        // Switch turn back to player
+        this.isMyTurn = true;
+        this._updateTurnBannerLocal(true);
+      }, delay);
+
       return;
     }
 
@@ -1824,9 +2588,35 @@ class BingoApp {
     if (this.completedLines.length < 5) return;
 
     if (this.isOfflineMode) {
-      // Local offline win
       soundManager.playVictory();
       this.confetti.burst(120);
+      this._stopTimers();
+      clearTimeout(this.botThinkingTimer);
+
+      if (this.dom.resultEmoji) this.dom.resultEmoji.textContent = '🏆';
+      if (this.dom.resultTitle) this.dom.resultTitle.textContent = t('victory') || 'Victory!';
+
+      if (this.isPassAndPlay) {
+        if (this.dom.resultDesc) this.dom.resultDesc.textContent = `Player ${this.passAndPlayCurrentPlayer} completed 5 B-I-N-G-O lines first!`;
+      } else if (this.isPracticeBotMode) {
+        if (this.dom.resultDesc) this.dom.resultDesc.textContent = `You defeated the AI Bot (${this.botDifficulty.toUpperCase()})!`;
+        this.coinBalance += 50;
+        this._updateWalletUI(this.coinBalance);
+        this._saveLocalWin();
+      } else if (this.isTournamentMatchMode) {
+        this._handleTournamentMatchVictory();
+      } else if (this.isTeam2v2) {
+        if (this.dom.resultDesc) this.dom.resultDesc.textContent = 'Team Blue completed 5 B-I-N-G-O lines! Champions!';
+        this.coinBalance += 150;
+        this._updateWalletUI(this.coinBalance);
+        this._saveLocalWin();
+      } else {
+        if (this.dom.resultDesc) this.dom.resultDesc.textContent = '5 Lines Completed Authority Verified.';
+        this.coinBalance += 100;
+        this._updateWalletUI(this.coinBalance);
+        this._saveLocalWin();
+      }
+
       this._showScreen('finished');
       return;
     }
@@ -1835,6 +2625,53 @@ class BingoApp {
     this.dom.bingoClaimBtn.disabled = true;
     if (this.dom.bingoBtnText) this.dom.bingoBtnText.textContent = 'VERIFYING...';
     this._send('claim_bingo', { claimId: `claim-${Date.now()}` });
+  }
+
+  _handleTournamentMatchVictory() {
+    this._saveLocalWin();
+
+    if (this.currentTournamentType === 'KNOCKOUT') {
+      this.knockoutRoundIndex++;
+      if (this.knockoutRoundIndex >= 3) {
+        this.coinBalance += 2500;
+        this._updateWalletUI(this.coinBalance);
+        this.knockoutRoundIndex = 0;
+        if (this.dom.resultTitle) this.dom.resultTitle.textContent = '🏆 TOURNAMENT CHAMPION!';
+        if (this.dom.resultDesc) this.dom.resultDesc.textContent = 'You conquered the Cobalt Cup! +2,500 Coins Awarded!';
+        if (this.dom.modeKoFixtureText) this.dom.modeKoFixtureText.textContent = 'Quarterfinal: You vs QuantumBingo';
+      } else {
+        const nextRound = this.knockoutRoundIndex === 1 ? 'Semifinal' : 'Grand Final';
+        const nextOpp = this.knockoutRoundIndex === 1 ? 'CyberNeon' : 'AstroViper';
+        if (this.dom.modeKoFixtureText) {
+          this.dom.modeKoFixtureText.textContent = `${nextRound}: You vs ${nextOpp}`;
+        }
+        if (this.dom.resultTitle) this.dom.resultTitle.textContent = `${this.knockoutRoundIndex === 1 ? 'Quarterfinal' : 'Semifinal'} Won!`;
+        if (this.dom.resultDesc) this.dom.resultDesc.textContent = `Advanced to ${nextRound}! Keep your streak alive!`;
+        this.coinBalance += 200;
+        this._updateWalletUI(this.coinBalance);
+      }
+      this._updateKnockoutBracketProgress(this.knockoutRoundIndex);
+    } else if (this.currentTournamentType === 'LEAGUE') {
+      this.leagueFixtureIndex++;
+      this.coinBalance += 100;
+      this._updateWalletUI(this.coinBalance);
+      this._updateLeagueTableOnWin();
+      if (this.dom.resultTitle) this.dom.resultTitle.textContent = 'League Match Won!';
+      if (this.dom.resultDesc) this.dom.resultDesc.textContent = '+2 Points earned in Premier League standings!';
+    } else if (this.currentTournamentType === 'FRIENDS_LEAGUE') {
+      this.friendsLeagueFixtureIndex++;
+      this._updateFriendsLeagueTableOnWin();
+      if (this.dom.resultTitle) this.dom.resultTitle.textContent = 'Friends League Match Won!';
+      if (this.dom.resultDesc) this.dom.resultDesc.textContent = '+Points earned on your Friends IPL table!';
+    } else if (this.currentTournamentType === 'FRIENDS_KNOCKOUT') {
+      this.friendsKoRoundIndex++;
+      if (this.dom.resultTitle) this.dom.resultTitle.textContent = 'Bracket Match Won!';
+      if (this.dom.resultDesc) this.dom.resultDesc.textContent = 'Eliminated opponent and advanced to next round!';
+    } else if (this.currentTournamentType === 'FRIENDS_HYBRID') {
+      this.friendsHybridFixtureIndex++;
+      if (this.dom.resultTitle) this.dom.resultTitle.textContent = 'Hybrid Match Won!';
+      if (this.dom.resultDesc) this.dom.resultDesc.textContent = 'Match recorded on Hybrid Tournament standings!';
+    }
   }
 
   _handleBingoResult(msg) {
@@ -1927,7 +2764,8 @@ class BingoApp {
           targetFriendId: f.id
         });
         challengeBtn.disabled = true;
-        challengeBtn.textContent = 'Sent...';
+        challengeBtn.textContent = 'Dueling...';
+        this.startFriendDuel(f);
       });
 
       this.dom.friendsDirectoryList.appendChild(card);

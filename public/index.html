@@ -532,6 +532,18 @@
         <div style="font-family:var(--font-display); font-weight:900; font-size:1.25rem;">Cobalt Cup Knockout</div>
         <div style="font-size:0.85rem; font-weight:700;">8 Players • Winner takes 2,500 🪙 • Single Elimination</div>
       </div>
+      
+      <!-- Current Match Banner for Mode 5 -->
+      <div class="game-card" id="mode-ko-fixture-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; background:var(--gold-light); border-color:#FFD447;">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--gold-dark);">Next Bracket Match</div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;" id="mode-ko-fixture-text">Quarterfinal: You vs QuantumBingo</div>
+        </div>
+        <button class="btn-tactile btn-gold btn-sm" id="btn-play-mode-ko-match">
+          ⚔️ Play Match
+        </button>
+      </div>
+
       <div class="bracket-rounds-wrapper" id="knockout-mode-bracket">
         <!-- Injected -->
       </div>
@@ -552,6 +564,18 @@
         <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Premier Bingo League</div>
         <div style="font-size:0.85rem; opacity:0.9;">Season 1 • Round-robin table • Top 3 Win Big</div>
       </div>
+
+      <!-- Current Fixture Banner -->
+      <div class="game-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; background:var(--gold-light); border-color:#FFD447;">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--gold-dark);">Next Match</div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;" id="league-current-fixture-text">Fixture 1: You vs CyberNeon</div>
+        </div>
+        <button class="btn-tactile btn-gold btn-sm" id="btn-play-league-match">
+          ⚔️ Play Match
+        </button>
+      </div>
+
       <div class="league-table-card">
         <table class="league-table" id="mode-league-table">
           <thead>
@@ -682,27 +706,59 @@
         </button>
         <span class="page-header-badge">Mode 11 • IPL League</span>
       </div>
-      <div class="game-card">
-        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800;">Friends IPL League</h3>
-        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">All friends compete in round-robin group fixtures. Top 4 advance to Semifinals and Finals!</p>
-        <div class="league-table-card" style="margin-bottom:12px;">
-          <table class="league-table" id="friends-league-table-body">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Player</th>
-                <th>MP</th>
-                <th>W</th>
-                <th>L</th>
-                <th>PTS</th>
-              </tr>
-            </thead>
-            <tbody><!-- Dynamic --></tbody>
-          </table>
+
+      <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #1769E0, #123B78); color:#FFFFFF;">
+        <div style="font-family:var(--font-display); font-weight:900; font-size:1.25rem;">Friends IPL League</div>
+        <div style="font-size:0.85rem; opacity:0.9;">Host an IPL-style league with group matches & live points table.</div>
+      </div>
+
+      <!-- League Setup Options -->
+      <div class="game-card" style="margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:0.85rem; font-weight:800; color:var(--text-secondary);">Participants</span>
+          <div style="display:flex; gap:6px;">
+            <button class="timer-chip active friends-league-size-chip" data-size="4">4 Players</button>
+            <button class="timer-chip friends-league-size-chip" data-size="6">6 Players</button>
+            <button class="timer-chip friends-league-size-chip" data-size="8">8 Players</button>
+          </div>
         </div>
-        <button class="btn-tactile btn-mint" id="btn-host-friends-league-cta" style="width:100%;">
-          <span>🏏</span> Host Friends League
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:0.85rem; font-weight:800; color:var(--text-secondary);">Win Points</span>
+          <div style="display:flex; gap:6px;">
+            <button class="timer-chip active friends-league-pts-chip" data-pts="2">2 Pts</button>
+            <button class="timer-chip friends-league-pts-chip" data-pts="3">3 Pts</button>
+          </div>
+        </div>
+        <button class="btn-tactile btn-mint" id="btn-create-friends-league" style="width:100%;">
+          <span>🏏</span> Create & Generate League
         </button>
+      </div>
+
+      <!-- Current Fixture Banner -->
+      <div class="game-card" id="friends-league-fixture-card" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; background:var(--gold-light); border-color:#FFD447;">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--gold-dark);">Next League Match</div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;" id="friends-league-fixture-text">Fixture 1: You vs CyberNeon</div>
+        </div>
+        <button class="btn-tactile btn-gold btn-sm" id="btn-play-friends-league-match">
+          ⚔️ Play Match
+        </button>
+      </div>
+
+      <div class="league-table-card">
+        <table class="league-table" id="friends-league-table-body">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>MP</th>
+              <th>W</th>
+              <th>L</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody><!-- Dynamic --></tbody>
+        </table>
       </div>
     </section>
 
@@ -714,15 +770,39 @@
         </button>
         <span class="page-header-badge">Mode 12 • Bracket</span>
       </div>
-      <div class="game-card">
-        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800; margin-bottom:4px;">Friends Knockout Bracket</h3>
-        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Single elimination cup with your private friend group.</p>
-        <div class="bracket-rounds-wrapper" id="friends-knockout-bracket">
-          <!-- Dynamic -->
+
+      <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #FF5555, #D93838); color:#FFFFFF;">
+        <div style="font-family:var(--font-display); font-weight:900; font-size:1.25rem;">Friends Elimination Cup</div>
+        <div style="font-size:0.85rem; opacity:0.9;">Single elimination bracket. Lose once and you are out!</div>
+      </div>
+
+      <!-- Knockout Setup Options -->
+      <div class="game-card" style="margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:0.85rem; font-weight:800; color:var(--text-secondary);">Bracket Size</span>
+          <div style="display:flex; gap:6px;">
+            <button class="timer-chip active friends-ko-size-chip" data-size="4">4 Players (Semis)</button>
+            <button class="timer-chip friends-ko-size-chip" data-size="8">8 Players (Quarters)</button>
+          </div>
         </div>
-        <button class="btn-tactile btn-danger" id="btn-host-friends-ko-cta" style="width:100%; margin-top:10px;">
-          <span>🏆</span> Host Friends Bracket
+        <button class="btn-tactile btn-danger" id="btn-create-friends-knockout" style="width:100%;">
+          <span>🏆</span> Generate Bracket
         </button>
+      </div>
+
+      <!-- Current Match Banner -->
+      <div class="game-card" id="friends-ko-fixture-card" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; background:var(--gold-light); border-color:#FFD447;">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--gold-dark);">Current Round</div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;" id="friends-ko-round-text">Quarterfinal: You vs AstroViper</div>
+        </div>
+        <button class="btn-tactile btn-gold btn-sm" id="btn-play-friends-ko-match">
+          ⚔️ Play Match
+        </button>
+      </div>
+
+      <div class="bracket-rounds-wrapper" id="friends-knockout-bracket">
+        <!-- Dynamic Bracket Cards -->
       </div>
     </section>
 
@@ -734,12 +814,51 @@
         </button>
         <span class="page-header-badge">Mode 13 • Hybrid</span>
       </div>
-      <div class="game-card">
-        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800; margin-bottom:4px;">Friends Hybrid Tournament</h3>
-        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Combines full league group stage with Top 4 championship playoffs (1v4, 2v3 → Final).</p>
-        <button class="btn-tactile btn-primary" id="btn-host-friends-hybrid-cta" style="width:100%;">
+
+      <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #1769E0, #FF8A24); color:#FFFFFF;">
+        <div style="font-family:var(--font-display); font-weight:900; font-size:1.25rem;">Friends Hybrid Masters</div>
+        <div style="font-size:0.85rem; opacity:0.9;">Full league group stage + Top 4 Championship Playoffs!</div>
+      </div>
+
+      <div class="game-card" style="margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:0.85rem; font-weight:800; color:var(--text-secondary);">Tournament Scale</span>
+          <div style="display:flex; gap:6px;">
+            <button class="timer-chip active friends-hybrid-size-chip" data-size="4">4 Players</button>
+            <button class="timer-chip friends-hybrid-size-chip" data-size="6">6 Players</button>
+            <button class="timer-chip friends-hybrid-size-chip" data-size="8">8 Players</button>
+          </div>
+        </div>
+        <button class="btn-tactile btn-primary" id="btn-create-friends-hybrid" style="width:100%;">
           <span>🌟</span> Launch Hybrid Tournament
         </button>
+      </div>
+
+      <!-- Current Match Banner -->
+      <div class="game-card" id="friends-hybrid-fixture-card" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; background:var(--gold-light); border-color:#FFD447;">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--gold-dark);" id="friends-hybrid-stage-label">Stage 1: Group League</div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;" id="friends-hybrid-fixture-text">Match 1: You vs ShadowRacer</div>
+        </div>
+        <button class="btn-tactile btn-gold btn-sm" id="btn-play-friends-hybrid-match">
+          ⚔️ Play Match
+        </button>
+      </div>
+
+      <div class="league-table-card" id="friends-hybrid-table-container">
+        <table class="league-table" id="friends-hybrid-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>MP</th>
+              <th>W</th>
+              <th>L</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody><!-- Injected --></tbody>
+        </table>
       </div>
     </section>
 
@@ -843,6 +962,10 @@
     <section id="screen-game" class="screen-view hidden gameplay-layout">
       <!-- TOP MATCH HEADER -->
       <div class="gameplay-top-bar">
+        <button class="btn-match-exit" id="btn-gameplay-exit" title="Leave Match" aria-label="Leave match">
+          <span class="back-arrow">←</span> Exit
+        </button>
+
         <!-- Opponent Profile Pill -->
         <div class="opponent-profile-chip">
           <div class="opp-avatar-small" id="game-opp-avatar">🐻</div>
@@ -1237,6 +1360,18 @@
         <button class="btn-tactile btn-secondary modal-close" data-close="modal-confirm-exit" style="flex:1;">Keep Playing</button>
         <button class="btn-tactile btn-danger" id="btn-confirm-forfeit-exit" style="flex:1;">Exit & Forfeit</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 7. Pass & Play Phone Modal -->
+  <div id="modal-pass-phone" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="text-align:center;">
+      <div style="font-size:3.5rem; margin-bottom:4px;">📱</div>
+      <h3 style="font-family:var(--font-display); font-size:1.35rem; font-weight:900;" id="pass-phone-title">Pass Phone to Player 2</h3>
+      <p style="font-size:0.85rem; color:var(--text-secondary);" id="pass-phone-desc">Screen is veiled for privacy. Hand the device over and tap continue when ready.</p>
+      <button class="btn-tactile btn-primary" id="btn-pass-phone-ready" style="width:100%; margin-top:10px;">
+        I'm Ready, Show Board →
+      </button>
     </div>
   </div>
 

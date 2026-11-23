@@ -221,7 +221,8 @@
 .gameplay-layout .board-game-container {
   flex: 1;
   min-height: 0;
-  max-height: min(84vw, calc(100% - 210px), 340px);
+  max-height: min(88vw, calc(100% - 200px), 440px);
+  width: min(88vw, calc(100% - 200px), 440px);
   aspect-ratio: 1 / 1;
   margin: auto;
   position: relative;
