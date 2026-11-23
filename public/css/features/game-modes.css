@@ -1,0 +1,122 @@
+/**
+ * public/css/features/game-modes.css
+ * Dedicated Game Modes Selection Hub (13 Playable Modes)
+ */
+
+.modes-hub-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modes-hub-header {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.modes-hub-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+.modes-hub-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* 13 Modes Cards Grid */
+.all-modes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 480px) {
+  .all-modes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.game-mode-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.game-mode-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-elevated);
+  border-color: var(--primary-blue);
+}
+
+.game-mode-card:active {
+  transform: translateY(2px);
+}
+
+.mode-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.mode-badge-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.mode-req-pill {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
+}
+
+.mode-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mode-number-tag {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-blue);
+}
+
+.mode-name-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+.mode-short-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}

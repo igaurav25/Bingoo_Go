@@ -1,0 +1,85 @@
+/**
+ * public/css/features/team-mode.css
+ * 2v2 Collaborative Team Battle UI (Mode 3)
+ */
+
+.teams-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.team-box-card {
+  background: #FFFFFF;
+  border: 2px solid;
+  border-radius: var(--radius-lg);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-card);
+}
+
+.team-box-card.team-blue {
+  border-color: var(--primary-blue);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0F6FE 100%);
+}
+
+.team-box-card.team-orange {
+  border-color: var(--accent-orange);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6EE 100%);
+}
+
+.team-header-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.team-blue .team-header-title {
+  color: var(--primary-blue);
+}
+
+.team-orange .team-header-title {
+  color: var(--accent-orange);
+}
+
+.team-members-row {
+  display: flex;
+  gap: 6px;
+}
+
+.team-player-slot {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.team-score-badge {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.team-blue .team-score-badge {
+  background: var(--primary-blue-light);
+  color: var(--primary-blue-dark);
+}
+
+.team-orange .team-score-badge {
+  background: var(--accent-orange-light);
+  color: var(--accent-orange-dark);
+}

@@ -1,0 +1,56 @@
+/**
+ * public/css/components/back-nav.css
+ * Universal Back Navigation Bar & Button System (Section 3)
+ */
+
+.back-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.btn-back-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-back-nav:hover {
+  background: var(--bg-subtle);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+.btn-back-nav:active {
+  transform: scale(0.95);
+}
+
+.btn-back-nav .back-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.page-header-badge {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-blue-light);
+  color: var(--primary-blue);
+}

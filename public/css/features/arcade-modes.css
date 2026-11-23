@@ -1,0 +1,98 @@
+/**
+ * public/css/features/arcade-modes.css
+ * Survival, Time Challenge, Practice vs Bot & Offline Mode
+ */
+
+/* Survival Mode Gauntlet */
+.survival-banner {
+  background: linear-gradient(135deg, #FF8A24 0%, #E04B12 100%);
+  color: #FFFFFF;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 18px rgba(255, 138, 36, 0.35);
+}
+
+.survival-round-badge {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.survival-timer-glow {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--gold-yellow);
+  text-shadow: 0 0 10px rgba(255, 212, 71, 0.6);
+}
+
+/* Time Challenge Speed Run */
+.time-challenge-clock-hero {
+  text-align: center;
+  padding: 20px 14px;
+  background: linear-gradient(135deg, #1769E0 0%, #123B78 100%);
+  border-radius: var(--radius-xl);
+  color: #FFFFFF;
+  box-shadow: 0 10px 24px rgba(23, 105, 224, 0.25);
+  margin-bottom: 12px;
+}
+
+.time-clock-huge {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 10vw, 3.8rem);
+  font-weight: 900;
+  color: var(--gold-yellow);
+  line-height: 1;
+  margin: 6px 0;
+  text-shadow: 0 4px 14px rgba(255, 212, 71, 0.45);
+}
+
+/* Practice Bot Selector */
+.bot-difficulty-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.bot-diff-card {
+  background: #FFFFFF;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bot-diff-card.active {
+  border-color: var(--primary-blue);
+  background: var(--primary-blue-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(23, 105, 224, 0.2);
+}
+
+.bot-diff-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 900;
+  margin-bottom: 2px;
+}
+
+.bot-diff-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* Offline Mode Switch */
+.offline-card-banner {
+  background: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+  color: #FFFFFF;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 12px;
+}

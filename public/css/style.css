@@ -4,9 +4,12 @@
  * 
  * Feature-based architecture:
  * 1. Foundations: variables, reset, typography, global, animations
- * 2. Reusable Components: buttons, cards, modals, navigation
- * 3. Features: home, matchmaking, number-arrangement, gameplay, private-rooms, tournaments, rewards, profile, leaderboard, settings
- * 4. Responsive & Media Queries: responsive.css
+ * 2. Reusable Components: buttons, cards, modals, navigation, back-nav
+ * 3. Features:
+ *    - home, game-modes, matchmaking, number-arrangement, gameplay
+ *    - private-rooms, tournaments, team-mode, friends, arcade-modes
+ *    - rewards, profile, leaderboard, settings
+ * 4. Responsive Breakpoints & Device Adaptation: responsive.css
  */
 
 /* 1. Foundations */
@@ -21,14 +24,19 @@
 @import './components/cards.css';
 @import './components/modals.css';
 @import './components/navigation.css';
+@import './components/back-nav.css';
 
 /* 3. Features */
 @import './features/home.css';
+@import './features/game-modes.css';
 @import './features/matchmaking.css';
 @import './features/number-arrangement.css';
 @import './features/gameplay.css';
 @import './features/private-rooms.css';
 @import './features/tournaments.css';
+@import './features/team-mode.css';
+@import './features/friends.css';
+@import './features/arcade-modes.css';
 @import './features/rewards.css';
 @import './features/profile.css';
 @import './features/leaderboard.css';

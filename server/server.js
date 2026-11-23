@@ -22,6 +22,8 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { deviceRooms, normalizeRoomCode } from './roomManager.js';
 import { economy } from './economy.js';
+import { tournamentManager } from './tournamentManager.js';
+import { friendsManager } from './friendsManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,7 +83,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (pathname === '/' || pathname.startsWith('/r/')) {
+  if (pathname === '/' || pathname.startsWith('/r/') || pathname.startsWith('/modes')) {
     const indexPath = path.join(PUBLIC_DIR, 'index.html');
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
@@ -702,6 +704,77 @@ wss.on('connection', (ws, req) => {
               coins: economy.getWallet(payload.playerId || 'guest').balance
             }
           });
+          break;
+        }
+
+        // --- Friends Directory & Challenges (Mode 4) ---
+        case 'get_friends_list': {
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId || 'guest';
+          const friends = friendsManager.getFriendsList(playerId);
+          send(ws, 'friends_list_data', { friends });
+          break;
+        }
+
+        case 'send_challenge': {
+          const fromId = payload.fromId || socketClients.get(ws)?.playerId || 'p1';
+          const fromName = payload.fromName || 'Player';
+          const fromAvatar = payload.fromAvatar || '🦊';
+          const targetFriendId = payload.targetFriendId;
+
+          const challenge = friendsManager.createChallenge({ id: fromId, name: fromName, avatar: fromAvatar }, targetFriendId);
+          send(ws, 'challenge_sent', { challenge });
+
+          // If target friend is an AI/mock friend or online player, simulate realistic duel accept
+          setTimeout(() => {
+            const code = deviceRooms.createRoom(fromId, `tok-${fromId}`, fromName, fromAvatar);
+            const room = deviceRooms.getRoom(code);
+            const friendName = targetFriendId.includes('alex') ? 'Alex_Pro' : (targetFriendId.includes('rohit') ? 'Rohit' : 'Friend_Duelist');
+            room.joinPlayer(`bot-${Date.now()}`, `tok-f`, friendName, '⚡');
+            send(ws, 'challenge_accepted', {
+              challengeId: challenge.id,
+              roomCode: code,
+              opponentName: friendName
+            });
+          }, 1500);
+          break;
+        }
+
+        // --- Friends Custom Tournaments (Modes 5, 6, 11, 12, 13) ---
+        case 'create_custom_tournament': {
+          const creatorId = payload.creatorId || socketClients.get(ws)?.playerId || 'p1';
+          const creatorName = payload.creatorName || 'Host';
+          const format = payload.format || 'LEAGUE'; // 'KNOCKOUT' | 'LEAGUE' | 'HYBRID'
+          const title = payload.title || 'Friends Premier Cup';
+          const maxParticipants = Number(payload.maxParticipants) || 8;
+          const pointsPerWin = Number(payload.pointsPerWin) || 2;
+          const pointsPerLoss = Number(payload.pointsPerLoss) || 0;
+
+          const tourn = tournamentManager.createTournament(format, title, creatorId, creatorName, {
+            maxParticipants,
+            pointsPerWin,
+            pointsPerLoss,
+            qualificationSlots: 4
+          });
+
+          send(ws, 'custom_tournament_created', { tournament: tourn.getSnapshot() });
+          break;
+        }
+
+        case 'start_custom_tournament': {
+          const tourn = tournamentManager.getTournament(payload.tournamentId);
+          if (tourn) {
+            const snapshot = tourn.startTournament();
+            send(ws, 'tournament_updated', { tournament: snapshot });
+          }
+          break;
+        }
+
+        case 'record_tournament_match_outcome': {
+          const tourn = tournamentManager.getTournament(payload.tournamentId);
+          if (tourn) {
+            const snapshot = tourn.recordMatchResult(payload.matchId, payload.winnerId);
+            send(ws, 'tournament_updated', { tournament: snapshot });
+          }
           break;
         }
       }

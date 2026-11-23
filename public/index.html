@@ -137,6 +137,11 @@
         </div>
       </div>
 
+      <!-- Browse All 13 Modes Entry CTA -->
+      <button id="btn-browse-all-modes" class="btn-tactile btn-primary" style="width:100%; font-size:1rem; padding:12px;">
+        <span>🎮</span> Browse All 13 Game Modes →
+      </button>
+
       <!-- Daily Reward Card -->
       <div class="reward-quest-card" id="card-daily-reward">
         <div class="reward-info">
@@ -185,6 +190,552 @@
           </div>
           <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);">8,450 🪙</span>
         </div>
+      </div>
+    </section>
+
+    <!-- ==================== GAME MODES HUB (Section 2 & 3) ==================== -->
+    <section id="screen-modes-hub" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="home">
+          <span class="back-arrow">←</span> Home
+        </button>
+        <span class="page-header-badge">13 Playable Modes</span>
+      </div>
+
+      <div class="modes-hub-header">
+        <h2 class="modes-hub-title">Game Modes</h2>
+        <p class="modes-hub-subtitle">Choose your battle format across 13 dedicated gameplay modes</p>
+      </div>
+
+      <div class="all-modes-grid" id="all-modes-grid-container">
+        <!-- Mode 1: Quick Match -->
+        <div class="game-mode-card" data-mode-target="quick-match">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#EBF2FD; color:#1769E0;">⚡</div>
+            <span class="mode-req-pill">1v1 Online</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 01</span>
+            <h3 class="mode-name-title">Quick Match</h3>
+            <p class="mode-short-desc">Instant 1v1 matchmaking with players worldwide or swift AI queue.</p>
+          </div>
+          <button class="btn-tactile btn-primary btn-sm" style="width:100%;">Play Mode →</button>
+        </div>
+
+        <!-- Mode 2: Private Room -->
+        <div class="game-mode-card" data-mode-target="private-room">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#FFF4EB; color:#FF8A24;">🔑</div>
+            <span class="mode-req-pill">2 Players</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 02</span>
+            <h3 class="mode-name-title">Private Room</h3>
+            <p class="mode-short-desc">Create or join custom private rooms using 5-character codes.</p>
+          </div>
+          <button class="btn-tactile btn-secondary btn-sm" style="width:100%;">Create / Join →</button>
+        </div>
+
+        <!-- Mode 3: 2v2 Team Battle -->
+        <div class="game-mode-card" data-mode-target="team-2v2">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#EDFAF5; color:#46D6A0;">🛡️</div>
+            <span class="mode-req-pill">4 Players (2v2)</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 03</span>
+            <h3 class="mode-name-title">2v2 Team Battle</h3>
+            <p class="mode-short-desc">Team Blue vs Team Orange in a cooperative shared-line duel.</p>
+          </div>
+          <button class="btn-tactile btn-mint btn-sm" style="width:100%;">Team Up →</button>
+        </div>
+
+        <!-- Mode 4: Friend Challenge -->
+        <div class="game-mode-card" data-mode-target="friend-challenge">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#EBF8FD; color:#55C7F2;">🎯</div>
+            <span class="mode-req-pill">Direct Duel</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 04</span>
+            <h3 class="mode-name-title">Friend Challenge</h3>
+            <p class="mode-short-desc">Challenge online friends directly from your active directory.</p>
+          </div>
+          <button class="btn-tactile btn-primary btn-sm" style="width:100%;">Challenge →</button>
+        </div>
+
+        <!-- Mode 5: Knockout Cup -->
+        <div class="game-mode-card" data-mode-target="knockout">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#FFEBEB; color:#FF5555;">🥊</div>
+            <span class="mode-req-pill">8 Players</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 05</span>
+            <h3 class="mode-name-title">Knockout Cup</h3>
+            <p class="mode-short-desc">Elimination bracket tournament: Quarterfinals to Champion!</p>
+          </div>
+          <button class="btn-tactile btn-danger btn-sm" style="width:100%;">Enter Bracket →</button>
+        </div>
+
+        <!-- Mode 6: Premier League -->
+        <div class="game-mode-card" data-mode-target="league">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#EBF2FD; color:#1769E0;">📋</div>
+            <span class="mode-req-pill">8 Players</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 06</span>
+            <h3 class="mode-name-title">Premier League</h3>
+            <p class="mode-short-desc">Season round-robin fixtures and points table standings.</p>
+          </div>
+          <button class="btn-tactile btn-primary btn-sm" style="width:100%;">View League →</button>
+        </div>
+
+        <!-- Mode 7: Practice Mode (Bot) -->
+        <div class="game-mode-card" data-mode-target="practice">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#F1F5F9; color:#64748B;">🤖</div>
+            <span class="mode-req-pill">Solo vs Bot</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 07</span>
+            <h3 class="mode-name-title">Practice vs Bot</h3>
+            <p class="mode-short-desc">Train against Easy, Medium, or Hard tactical AI engines.</p>
+          </div>
+          <button class="btn-tactile btn-secondary btn-sm" style="width:100%;">Practice →</button>
+        </div>
+
+        <!-- Mode 8: Offline Mode -->
+        <div class="game-mode-card" data-mode-target="offline">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#F3F4F6; color:#1F2937;">✈️</div>
+            <span class="mode-req-pill">Zero Internet</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 08</span>
+            <h3 class="mode-name-title">Offline Mode</h3>
+            <p class="mode-short-desc">Pass-and-play on one phone or challenge local offline AI.</p>
+          </div>
+          <button class="btn-tactile btn-secondary btn-sm" style="width:100%;">Play Offline →</button>
+        </div>
+
+        <!-- Mode 9: Survival Mode -->
+        <div class="game-mode-card" data-mode-target="survival">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#FFF4EB; color:#FF8A24;">🔥</div>
+            <span class="mode-req-pill">Endurance</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 09</span>
+            <h3 class="mode-name-title">Survival Gauntlet</h3>
+            <p class="mode-short-desc">Beat consecutive rounds against accelerating timers.</p>
+          </div>
+          <button class="btn-tactile btn-gold btn-sm" style="width:100%;">Survive →</button>
+        </div>
+
+        <!-- Mode 10: Time Challenge -->
+        <div class="game-mode-card" data-mode-target="time-challenge">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#FFF9E6; color:#FFD447;">⏱️</div>
+            <span class="mode-req-pill">Speed Run</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 10</span>
+            <h3 class="mode-name-title">Time Challenge</h3>
+            <p class="mode-short-desc">Beat the countdown clock and rack up speed bonus points.</p>
+          </div>
+          <button class="btn-tactile btn-gold btn-sm" style="width:100%;">Start Clock →</button>
+        </div>
+
+        <!-- Mode 11: Friends League (IPL) -->
+        <div class="game-mode-card" data-mode-target="friends-league">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#EDFAF5; color:#46D6A0;">🏏</div>
+            <span class="mode-req-pill">4 - 16 Friends</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 11</span>
+            <h3 class="mode-name-title">Friends League (IPL)</h3>
+            <p class="mode-short-desc">Host an IPL-style league with points table and Top 4 playoffs.</p>
+          </div>
+          <button class="btn-tactile btn-mint btn-sm" style="width:100%;">Host League →</button>
+        </div>
+
+        <!-- Mode 12: Friends Knockout -->
+        <div class="game-mode-card" data-mode-target="friends-knockout">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#FFEBEB; color:#FF5555;">🏆</div>
+            <span class="mode-req-pill">4 - 16 Friends</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 12</span>
+            <h3 class="mode-name-title">Friends Knockout</h3>
+            <p class="mode-short-desc">Create private elimination bracket with custom participants.</p>
+          </div>
+          <button class="btn-tactile btn-danger btn-sm" style="width:100%;">Create Bracket →</button>
+        </div>
+
+        <!-- Mode 13: Friends Hybrid Tournament -->
+        <div class="game-mode-card" data-mode-target="friends-hybrid">
+          <div class="mode-card-top">
+            <div class="mode-badge-icon" style="background:#EBF8FD; color:#55C7F2;">🌟</div>
+            <span class="mode-req-pill">League + Playoffs</span>
+          </div>
+          <div class="mode-info-block">
+            <span class="mode-number-tag">Mode 13</span>
+            <h3 class="mode-name-title">Friends Hybrid</h3>
+            <p class="mode-short-desc">All players play group stage, top 4 advance to Semifinals & Finals.</p>
+          </div>
+          <button class="btn-tactile btn-primary btn-sm" style="width:100%;">Host Hybrid →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 1: QUICK MATCH ==================== -->
+    <section id="screen-mode-quick-match" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 01 • 1v1</span>
+      </div>
+      <div class="game-card" style="text-align:center; padding:24px 16px;">
+        <div style="font-size:3.5rem; margin-bottom:8px;">⚡</div>
+        <h2 style="font-family:var(--font-display); font-size:1.5rem; font-weight:900;">Quick Match</h2>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:16px;">Instantly pair against live online players worldwide.</p>
+        <button class="btn-tactile btn-gold btn-cta" id="btn-start-quick-duel" style="width:100%; margin-bottom:8px;">
+          <span>⚡</span> Find 1v1 Match
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 2: PRIVATE ROOM ==================== -->
+    <section id="screen-mode-private-room" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 02 • Private</span>
+      </div>
+      
+      <!-- Normal Room vs Tournament Room Tabs (Section 4) -->
+      <div class="tourn-tabs-bar">
+        <button class="tourn-tab active" id="tab-room-normal">Casual Room</button>
+        <button class="tourn-tab" id="tab-room-tournament">Tournament Room</button>
+      </div>
+
+      <!-- Casual Room Box -->
+      <div id="view-room-normal" class="game-card" style="display:flex; flex-direction:column; gap:12px;">
+        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800;">Casual Private Game</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary);">Create a casual room or enter your friend's code to play together.</p>
+        <button class="btn-tactile btn-primary" id="btn-create-casual-room">
+          <span>➕</span> Create New Room
+        </button>
+      </div>
+
+      <!-- Tournament Room Creation Wizard (Section 4) -->
+      <div id="view-room-tournament" class="game-card" style="display:none; flex-direction:column; gap:12px;">
+        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800;">Create Tournament Room</h3>
+        <div>
+          <label style="font-size:0.8rem; font-weight:800; color:var(--text-secondary);">Tournament Name</label>
+          <input type="text" id="input-tourn-name" value="Friends Premier Cup" style="width:100%; padding:10px; border-radius:12px; border:1.5px solid var(--card-border); margin-top:4px; font-weight:700;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:800; color:var(--text-secondary);">Tournament Format</label>
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button class="timer-chip active tourn-format-chip" data-format="LEAGUE">League (IPL)</button>
+            <button class="timer-chip tourn-format-chip" data-format="KNOCKOUT">Knockout</button>
+            <button class="timer-chip tourn-format-chip" data-format="HYBRID">Hybrid</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:800; color:var(--text-secondary);">Participant Count</label>
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button class="timer-chip active tourn-count-chip" data-count="4">4</button>
+            <button class="timer-chip tourn-count-chip" data-count="6">6</button>
+            <button class="timer-chip tourn-count-chip" data-count="8">8</button>
+            <button class="timer-chip tourn-count-chip" data-count="12">12</button>
+          </div>
+        </div>
+        <button class="btn-tactile btn-mint" id="btn-confirm-create-tournament" style="width:100%; margin-top:8px;">
+          <span>🏆</span> Launch Tournament Room
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 3: 2V2 TEAM BATTLE ==================== -->
+    <section id="screen-mode-team-2v2" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 03 • 2v2 Team</span>
+      </div>
+      <div class="teams-wrapper">
+        <div class="team-box-card team-blue">
+          <div class="team-header-title">Team Blue</div>
+          <div class="team-members-row">
+            <div class="team-player-slot">🦊</div>
+            <div class="team-player-slot">⚡</div>
+          </div>
+          <div class="team-score-badge">B I N</div>
+        </div>
+        <div class="team-box-card team-orange">
+          <div class="team-header-title">Team Orange</div>
+          <div class="team-members-row">
+            <div class="team-player-slot">🐻</div>
+            <div class="team-player-slot">🐱</div>
+          </div>
+          <div class="team-score-badge">B I</div>
+        </div>
+      </div>
+      <div class="game-card">
+        <h3 style="font-family:var(--font-display); font-size:1rem; font-weight:800; margin-bottom:4px;">2v2 Collaborative Rules</h3>
+        <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:12px;">Lines completed by either you or your teammate count toward your team's collective 5 B-I-N-G-O letters!</p>
+        <button class="btn-tactile btn-primary" id="btn-start-team-2v2" style="width:100%;">
+          <span>🛡️</span> Find 2v2 Match
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 4: FRIEND CHALLENGE ==================== -->
+    <section id="screen-mode-friend-challenge" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 04 • Friends</span>
+      </div>
+      <div class="game-card" style="margin-bottom:10px;">
+        <h3 style="font-family:var(--font-display); font-size:1.1rem; font-weight:800;">Direct Friend Duel</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary);">Select an online friend below to send a real-time challenge invitation.</p>
+      </div>
+      <div class="friends-directory-list" id="friends-directory-list">
+        <!-- Injected dynamically -->
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 5: KNOCKOUT CUP ==================== -->
+    <section id="screen-mode-knockout" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 05 • Knockout</span>
+      </div>
+      <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #FFC857, #FFA927); color:var(--text-dark);">
+        <div style="font-family:var(--font-display); font-weight:900; font-size:1.25rem;">Cobalt Cup Knockout</div>
+        <div style="font-size:0.85rem; font-weight:700;">8 Players • Winner takes 2,500 🪙 • Single Elimination</div>
+      </div>
+      <div class="bracket-rounds-wrapper" id="knockout-mode-bracket">
+        <!-- Injected -->
+      </div>
+      <button class="btn-tactile btn-primary" id="btn-enter-mode-knockout" style="width:100%; margin-top:10px;">
+        <span>🏆</span> Enter Tournament (100 🪙)
+      </button>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 6: PREMIER LEAGUE ==================== -->
+    <section id="screen-mode-league" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 06 • League</span>
+      </div>
+      <div class="game-card" style="margin-bottom:12px; background:var(--primary-blue); color:#FFFFFF;">
+        <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Premier Bingo League</div>
+        <div style="font-size:0.85rem; opacity:0.9;">Season 1 • Round-robin table • Top 3 Win Big</div>
+      </div>
+      <div class="league-table-card">
+        <table class="league-table" id="mode-league-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>MP</th>
+              <th>W</th>
+              <th>L</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody><!-- Injected --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 7: PRACTICE VS BOT ==================== -->
+    <section id="screen-mode-practice" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 07 • Practice</span>
+      </div>
+      <div class="game-card">
+        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800; margin-bottom:4px;">Practice vs AI Bot</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary);">Select the bot difficulty level to refine your line cutting strategy.</p>
+        <div class="bot-difficulty-grid">
+          <div class="bot-diff-card active" data-diff="easy">
+            <div class="bot-diff-title">Easy</div>
+            <div class="bot-diff-desc">Relaxed turns</div>
+          </div>
+          <div class="bot-diff-card" data-diff="medium">
+            <div class="bot-diff-title">Medium</div>
+            <div class="bot-diff-desc">Tactical picks</div>
+          </div>
+          <div class="bot-diff-card" data-diff="hard">
+            <div class="bot-diff-title">Hard</div>
+            <div class="bot-diff-desc">Elite BINGO bot</div>
+          </div>
+        </div>
+        <button class="btn-tactile btn-primary" id="btn-start-practice-bot-duel" style="width:100%; margin-top:8px;">
+          <span>🤖</span> Start Practice Match
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 8: OFFLINE MODE ==================== -->
+    <section id="screen-mode-offline" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 08 • Offline</span>
+      </div>
+      <div class="offline-card-banner">
+        <div style="font-family:var(--font-display); font-size:1.3rem; font-weight:900;">Zero Internet Required ✈️</div>
+        <p style="font-size:0.85rem; opacity:0.85; margin-top:4px;">Play on airplanes, subways, or without data connection.</p>
+      </div>
+      <div class="game-card" style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn-tactile btn-secondary" id="btn-offline-pass-and-play" style="width:100%;">
+          <span>📱</span> Pass & Play (2 Players, 1 Phone)
+        </button>
+        <button class="btn-tactile btn-primary" id="btn-offline-bot" style="width:100%;">
+          <span>🤖</span> Play vs Local Offline Bot
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 9: SURVIVAL GAUNTLET ==================== -->
+    <section id="screen-mode-survival" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 09 • Survival</span>
+      </div>
+      <div class="survival-banner">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800;">Current Round</div>
+          <div class="survival-round-badge" id="survival-round-text">Round 1</div>
+        </div>
+        <div class="survival-timer-glow" id="survival-timer-text">60s</div>
+      </div>
+      <div class="game-card" style="margin-top:12px;">
+        <h3 style="font-family:var(--font-display); font-size:1.05rem; font-weight:800; margin-bottom:4px;">Survival Rules</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Complete required lines before time runs out. Each round reduces the clock by 10s. One mistake and you are out!</p>
+        <button class="btn-tactile btn-gold btn-cta" id="btn-launch-survival" style="width:100%;">
+          <span>🔥</span> Enter Gauntlet
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 10: TIME CHALLENGE ==================== -->
+    <section id="screen-mode-time-challenge" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 10 • Speed</span>
+      </div>
+      <div class="time-challenge-clock-hero">
+        <div style="font-size:0.8rem; text-transform:uppercase; font-weight:800; color:var(--gold-yellow);">Beat the Clock</div>
+        <div class="time-clock-huge" id="time-challenge-clock">60s</div>
+        <p style="font-size:0.85rem; opacity:0.9;">Cut as many B-I-N-G-O lines as you can before time expires!</p>
+      </div>
+      <div class="game-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-weight:700;">Challenge Duration:</span>
+          <div style="display:flex; gap:6px;">
+            <button class="timer-chip active time-limit-chip" data-secs="60">60s</button>
+            <button class="timer-chip time-limit-chip" data-secs="90">90s</button>
+            <button class="timer-chip time-limit-chip" data-secs="120">120s</button>
+          </div>
+        </div>
+        <button class="btn-tactile btn-gold" id="btn-start-time-challenge" style="width:100%;">
+          <span>⚡</span> Start Speed Run
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 11: FRIENDS LEAGUE (IPL) ==================== -->
+    <section id="screen-mode-friends-league" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 11 • IPL League</span>
+      </div>
+      <div class="game-card">
+        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800;">Friends IPL League</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">All friends compete in round-robin group fixtures. Top 4 advance to Semifinals and Finals!</p>
+        <div class="league-table-card" style="margin-bottom:12px;">
+          <table class="league-table" id="friends-league-table-body">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>MP</th>
+                <th>W</th>
+                <th>L</th>
+                <th>PTS</th>
+              </tr>
+            </thead>
+            <tbody><!-- Dynamic --></tbody>
+          </table>
+        </div>
+        <button class="btn-tactile btn-mint" id="btn-host-friends-league-cta" style="width:100%;">
+          <span>🏏</span> Host Friends League
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 12: FRIENDS KNOCKOUT ==================== -->
+    <section id="screen-mode-friends-knockout" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 12 • Bracket</span>
+      </div>
+      <div class="game-card">
+        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800; margin-bottom:4px;">Friends Knockout Bracket</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Single elimination cup with your private friend group.</p>
+        <div class="bracket-rounds-wrapper" id="friends-knockout-bracket">
+          <!-- Dynamic -->
+        </div>
+        <button class="btn-tactile btn-danger" id="btn-host-friends-ko-cta" style="width:100%; margin-top:10px;">
+          <span>🏆</span> Host Friends Bracket
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== DEDICATED MODE 13: FRIENDS HYBRID ==================== -->
+    <section id="screen-mode-friends-hybrid" class="screen-view hidden">
+      <div class="back-nav-bar">
+        <button class="btn-back-nav" data-back="modes">
+          <span class="back-arrow">←</span> Game Modes
+        </button>
+        <span class="page-header-badge">Mode 13 • Hybrid</span>
+      </div>
+      <div class="game-card">
+        <h3 style="font-family:var(--font-display); font-size:1.15rem; font-weight:800; margin-bottom:4px;">Friends Hybrid Tournament</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Combines full league group stage with Top 4 championship playoffs (1v4, 2v3 → Final).</p>
+        <button class="btn-tactile btn-primary" id="btn-host-friends-hybrid-cta" style="width:100%;">
+          <span>🌟</span> Launch Hybrid Tournament
+        </button>
       </div>
     </section>
 
@@ -662,6 +1213,19 @@
         </div>
       </div>
       <button class="btn-tactile btn-secondary modal-close" data-close="modal-settings" style="width:100%;">Done</button>
+    </div>
+  </div>
+
+  <!-- 6. Exit Match Confirmation Modal (Section 3) -->
+  <div id="modal-confirm-exit" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="text-align:center;">
+      <div style="font-size:3rem; margin-bottom:4px;">⚠️</div>
+      <h3 style="font-family:var(--font-display); font-size:1.35rem; font-weight:900; color:var(--coral-red);">Abandon Match?</h3>
+      <p style="font-size:0.85rem; color:var(--text-secondary);">You are currently in an active game. Leaving now will forfeit the match and record a loss.</p>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn-tactile btn-secondary modal-close" data-close="modal-confirm-exit" style="flex:1;">Keep Playing</button>
+        <button class="btn-tactile btn-danger" id="btn-confirm-forfeit-exit" style="flex:1;">Exit & Forfeit</button>
+      </div>
     </div>
   </div>
 
