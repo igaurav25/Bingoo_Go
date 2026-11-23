@@ -598,6 +598,112 @@ wss.on('connection', (ws, req) => {
           }
           break;
         }
+
+        // --- Economy, Rewards, Tournaments & Leaderboards ---
+        case 'get_wallet': {
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId || 'guest';
+          const wallet = economy.getWallet(playerId);
+          send(ws, 'wallet_data', wallet);
+          break;
+        }
+
+        case 'claim_daily_reward': {
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId || 'guest';
+          const acc = economy.getAccount(playerId);
+          acc.balance += 100;
+          const tx = {
+            id: `tx-daily-${Date.now()}`,
+            timestamp: Date.now(),
+            type: 'DAILY_REWARD',
+            amount: 100,
+            balanceAfter: acc.balance,
+            description: '🎁 Daily Login Reward: 100 Coins'
+          };
+          acc.history.unshift(tx);
+          send(ws, 'daily_reward_claimed', {
+            balance: acc.balance,
+            transaction: tx
+          });
+          break;
+        }
+
+        case 'get_tournaments': {
+          send(ws, 'tournaments_data', {
+            knockout: {
+              id: 'tourn-ko-1',
+              title: 'Cobalt Cup Knockout',
+              prizePool: 2500,
+              entryFee: 100,
+              status: 'LIVE',
+              rounds: [
+                {
+                  name: 'Quarterfinals',
+                  matches: [
+                    { id: 'm1', p1: { name: 'You', score: 5, winner: true }, p2: { name: 'Viper99', score: 3 } },
+                    { id: 'm2', p1: { name: 'Alex_Pro', score: 5, winner: true }, p2: { name: 'Zara', score: 4 } },
+                    { id: 'm3', p1: { name: 'Rohit', score: 5, winner: true }, p2: { name: 'Kiran', score: 2 } },
+                    { id: 'm4', p1: { name: 'Shadow', score: 5, winner: true }, p2: { name: 'Priya', score: 1 } }
+                  ]
+                },
+                {
+                  name: 'Semifinals',
+                  matches: [
+                    { id: 'm5', p1: { name: 'You', score: 0 }, p2: { name: 'Alex_Pro', score: 0 } },
+                    { id: 'm6', p1: { name: 'Rohit', score: 0 }, p2: { name: 'Shadow', score: 0 } }
+                  ]
+                },
+                {
+                  name: 'Final',
+                  matches: [
+                    { id: 'm7', p1: { name: 'TBD', score: 0 }, p2: { name: 'TBD', score: 0 } }
+                  ]
+                }
+              ]
+            },
+            league: {
+              id: 'tourn-lg-1',
+              title: 'Premier Bingo League',
+              prizePool: 5000,
+              standings: [
+                { rank: 1, name: 'Alex_Pro', avatar: '⚡', mp: 10, w: 9, l: 1, pts: 27 },
+                { rank: 2, name: 'Rohit', avatar: '🦊', mp: 10, w: 8, l: 2, pts: 24 },
+                { rank: 3, name: 'You', avatar: '🎮', mp: 10, w: 7, l: 3, pts: 21 },
+                { rank: 4, name: 'Shadow', avatar: '🐱', mp: 10, w: 6, l: 4, pts: 18 },
+                { rank: 5, name: 'Zara', avatar: '🐼', mp: 10, w: 5, l: 5, pts: 15 },
+                { rank: 6, name: 'Viper99', avatar: '🐍', mp: 10, w: 4, l: 6, pts: 12 },
+                { rank: 7, name: 'Kiran', avatar: '🐯', mp: 10, w: 2, l: 8, pts: 6 },
+                { rank: 8, name: 'Priya', avatar: '🐰', mp: 10, w: 1, l: 9, pts: 3 }
+              ]
+            }
+          });
+          break;
+        }
+
+        case 'get_leaderboard': {
+          send(ws, 'leaderboard_data', {
+            top3: [
+              { rank: 1, name: 'Alex_Pro', avatar: '⚡', wins: 142, winRate: '78%', coins: 8450, medal: 'gold' },
+              { rank: 2, name: 'Rohit', avatar: '🦊', wins: 128, winRate: '74%', coins: 6920, medal: 'silver' },
+              { rank: 3, name: 'LuckyStar', avatar: '⭐', wins: 115, winRate: '71%', coins: 5800, medal: 'bronze' }
+            ],
+            ranks: [
+              { rank: 4, name: 'Shadow', avatar: '🐱', wins: 98, winRate: '65%', coins: 4320 },
+              { rank: 5, name: 'Zara', avatar: '🐼', wins: 87, winRate: '62%', coins: 3950 },
+              { rank: 6, name: 'BingoViper', avatar: '🐍', wins: 76, winRate: '59%', coins: 3100 },
+              { rank: 7, name: 'CyberSam', avatar: '🤖', wins: 64, winRate: '55%', coins: 2800 },
+              { rank: 8, name: 'Kiran', avatar: '🐯', wins: 55, winRate: '52%', coins: 2350 },
+              { rank: 9, name: 'NeonRider', avatar: '🚀', wins: 49, winRate: '49%', coins: 1980 },
+              { rank: 10, name: 'Priya', avatar: '🐰', wins: 42, winRate: '46%', coins: 1650 }
+            ],
+            userRank: {
+              rank: 14,
+              wins: 28,
+              winRate: '68%',
+              coins: economy.getWallet(payload.playerId || 'guest').balance
+            }
+          });
+          break;
+        }
       }
     } catch (err) {
       console.error('[WebSocket] Message error:', err);

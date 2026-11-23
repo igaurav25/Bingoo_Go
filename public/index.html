@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Bingo, rainy night</title>
-  <meta name="description" content="Classic 2D notebook Bingo on a rainy night. Create a room and play live across two phones on any network.">
-  <meta name="theme-color" content="#131525">
+  <title>BINGO — Premium 2D Multiplayer Mobile Game</title>
+  <meta name="description" content="Classic 5x5 notebook Bingo reimagined with a premium modern board game aesthetic. Play live with friends across two phones or enter tournaments.">
+  <meta name="theme-color" content="#F8F5EF">
 
-  <!-- Open Graph Meta Tags for WhatsApp & Social Media Preview -->
+  <!-- Open Graph Meta Tags -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Bingo, rainy night">
-  <meta property="og:description" content="Classic 2D notebook Bingo on a rainy night. Tap the link to join my game!">
+  <meta property="og:title" content="BINGO — Premium Multiplayer Mobile Game">
+  <meta property="og:description" content="Classic 5x5 notebook Bingo reimagined. Tap the link to play live with me!">
   <meta property="og:image" content="/assets/og-image.svg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -20,399 +20,621 @@
   <link rel="apple-touch-icon" href="/assets/icon-192.svg">
   <link rel="icon" type="image/svg+xml" href="/assets/icon-192.svg">
 
-  <!-- Fonts: Instrument Sans (Display), Figtree (Body), Kalam (Handwriting) -->
+  <!-- Google Fonts: Plus Jakarta Sans (Modern Display), Figtree (Editorial Body), Kalam (Handwriting) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Kalam:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Figtree:wght@400;500;600;700&family=Kalam:wght@700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <!-- Ambient Rainy Night Background Canvas -->
-  <canvas id="rain" aria-hidden="true"></canvas>
+  <!-- Ambient Board Game Background Pattern -->
+  <div class="bg-board-pattern" aria-hidden="true"></div>
 
   <!-- Celebration Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <main class="app-viewport">
-    <!-- Top Header -->
-    <header class="app-header">
-      <h1 class="brand-wordmark" id="app-title">Bingo</h1>
-      <div class="header-chips">
-        <button id="profile-chip-btn" class="avatar-chip" aria-label="Edit Profile">
-          <span class="avatar-circle" id="header-avatar">🦊</span>
-          <span id="header-name">Player</span>
+  <main class="app-container" id="app-root">
+    <!-- ==================== GLOBAL HEADER ==================== -->
+    <header class="main-app-header" id="main-header">
+      <div class="brand-badge" id="brand-home-btn" title="Home">
+        <div class="brand-icon-box">B</div>
+        <div style="display:flex; align-items:center;">
+          <h1 class="brand-title">BINGO</h1>
+          <span class="brand-tag">2D</span>
+        </div>
+      </div>
+
+      <div class="header-right-group">
+        <!-- Coin Wallet Balance Pill -->
+        <div class="coin-pill" id="header-coin-pill" title="Coin Balance">
+          <div class="coin-icon">🪙</div>
+          <span id="header-coin-amount">500</span>
+        </div>
+
+        <!-- Notification Bell Button -->
+        <button class="icon-btn-round" id="btn-notifications" aria-label="Notifications" title="Daily Rewards">
+          🔔
         </button>
-        <button id="settings-btn" class="icon-btn" aria-label="Settings">⚙️</button>
+
+        <!-- Settings Button -->
+        <button class="icon-btn-round" id="settings-btn" aria-label="Settings" title="Game Settings">
+          ⚙️
+        </button>
       </div>
     </header>
 
     <!-- Disconnect / Pause Alert Banner (Shown during friend disconnect) -->
-    <div id="disconnect-banner" class="alert-banner" style="display:none;">
+    <div id="disconnect-banner" class="game-card" style="display:none; background:#FFF0ED; border-color:#FF765E; padding:10px 14px; margin-bottom:10px; color:#D9543C; font-weight:700; font-size:0.85rem; display:none; align-items:center; gap:8px;">
       <span>⚠️</span>
       <span id="disconnect-banner-text">Friend disconnected. Waiting up to 60 s.</span>
     </div>
 
     <!-- ==================== 1. HOME SCREEN ==================== -->
-    <section id="screen-home" class="screen">
-      <div class="home-hero-card">
-        <div style="font-size:3.5rem; line-height:1;">📒</div>
-        <p class="home-tagline" id="home-tagline">Classic notebook bingo with friends across two phones.</p>
+    <section id="screen-home" class="screen-view">
+      <!-- Hero Banner -->
+      <div class="home-hero-banner">
+        <div class="hero-content">
+          <div class="hero-subtitle">Classic 5×5 Notebook Battle</div>
+          <h2 class="hero-title">Cut 5 Lines.<br>Claim BINGO!</h2>
 
-        <!-- Primary Action: Create Room -->
-        <button id="btn-create-room" class="btn-pill btn-primary" style="width:100%;">
-          <span>➕</span> <span id="lbl-create-room">Create room</span>
-        </button>
-
-        <div style="color:var(--text-muted); font-size:0.85rem; font-weight:700;">— OR —</div>
-
-        <!-- Secondary Action: Join with 5-box Code -->
-        <div class="join-code-group">
-          <label for="code-box-0" style="font-size:0.9rem; font-weight:700; color:var(--text-dim);" id="lbl-join-with-code">Join with code</label>
-          <div class="join-code-boxes">
-            <input type="text" class="code-box-input" maxlength="1" id="code-box-0" autocomplete="off" autocorrect="off" autocapitalize="characters">
-            <input type="text" class="code-box-input" maxlength="1" id="code-box-1" autocomplete="off" autocorrect="off" autocapitalize="characters">
-            <input type="text" class="code-box-input" maxlength="1" id="code-box-2" autocomplete="off" autocorrect="off" autocapitalize="characters">
-            <input type="text" class="code-box-input" maxlength="1" id="code-box-3" autocomplete="off" autocorrect="off" autocapitalize="characters">
-            <input type="text" class="code-box-input" maxlength="1" id="code-box-4" autocomplete="off" autocorrect="off" autocapitalize="characters">
+          <!-- Interactive mini board tiles preview -->
+          <div class="hero-tiles-row">
+            <div class="hero-tile">7</div>
+            <div class="hero-tile active">14</div>
+            <div class="hero-tile">21</div>
+            <div class="hero-tile active">3</div>
+            <div class="hero-tile">25</div>
           </div>
-          <button id="btn-join-code" class="btn-pill btn-secondary" style="width:100%; margin-top:4px;">
-            <span id="lbl-join-btn">Join</span>
+
+          <button id="btn-hero-play" class="btn-tactile btn-gold" style="width:100%; font-size:1.15rem;">
+            <span>⚡</span> PLAY NOW
           </button>
         </div>
       </div>
 
-      <div class="home-footer-actions">
-        <button id="btn-how-to-play" class="text-btn">How to play</button>
-        <button id="btn-stats" class="text-btn">My stats</button>
+      <!-- 4 Core Game Options Grid -->
+      <div class="modes-grid">
+        <div class="mode-card quick-match" id="mode-quick-match">
+          <div class="mode-icon-circle">⚡</div>
+          <h3 class="mode-title">Quick Match</h3>
+          <p class="mode-desc">Instant 1v1 online battle</p>
+        </div>
+
+        <div class="mode-card create-room" id="mode-create-room">
+          <div class="mode-icon-circle">➕</div>
+          <h3 class="mode-title">Create Room</h3>
+          <p class="mode-desc">Invite friends with link</p>
+        </div>
+
+        <div class="mode-card join-room" id="mode-join-room">
+          <div class="mode-icon-circle">🔑</div>
+          <h3 class="mode-title">Join Room</h3>
+          <p class="mode-desc">Enter 5-character code</p>
+        </div>
+
+        <div class="mode-card tournament-mode" id="mode-tournament">
+          <div class="mode-icon-circle">🏆</div>
+          <h3 class="mode-title">Tournaments</h3>
+          <p class="mode-desc">Knockout & League cups</p>
+        </div>
+      </div>
+
+      <!-- Daily Reward Card -->
+      <div class="reward-quest-card" id="card-daily-reward">
+        <div class="reward-info">
+          <div class="reward-gift-box">🎁</div>
+          <div>
+            <div class="reward-title">Daily Coin Gift</div>
+            <div class="reward-sub">Claim 100 free coins every day</div>
+          </div>
+        </div>
+        <button class="btn-tactile btn-primary" id="btn-claim-daily" style="padding:8px 16px; font-size:0.9rem;">
+          Claim
+        </button>
+      </div>
+
+      <!-- Quick Join Box Container (Shown when Join Mode is tapped) -->
+      <div id="home-join-card" class="game-card" style="display:none; text-align:center;">
+        <h3 style="font-family:var(--font-display); font-size:1.1rem; font-weight:800; margin-bottom:6px;">Enter Room Code</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Type the 5-character room code shared by your friend.</p>
+        <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
+          <input type="text" class="code-box-input" maxlength="1" id="code-box-0" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+          <input type="text" class="code-box-input" maxlength="1" id="code-box-1" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+          <input type="text" class="code-box-input" maxlength="1" id="code-box-2" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+          <input type="text" class="code-box-input" maxlength="1" id="code-box-3" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+          <input type="text" class="code-box-input" maxlength="1" id="code-box-4" autocomplete="off" autocapitalize="characters" style="width:48px; height:52px; text-align:center; font-family:var(--font-display); font-size:1.6rem; font-weight:800; border:2px solid var(--border-color); border-radius:12px; background:var(--bg-subtle);">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-tactile btn-secondary" id="btn-cancel-join" style="flex:1;">Cancel</button>
+          <button class="btn-tactile btn-primary" id="btn-join-code" style="flex:1;">Join Game</button>
+        </div>
+      </div>
+
+      <!-- Quick Leaderboard Teaser -->
+      <div class="game-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:0.95rem;">Weekly Champions</div>
+          <button class="text-btn" id="btn-view-all-leaderboard" style="font-size:0.8rem; color:var(--primary-blue); font-weight:700; background:none; border:none; cursor:pointer;">View All →</button>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--bg-subtle); border-radius:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.3rem;">🥇</span>
+            <span style="font-size:1.4rem;">⚡</span>
+            <div>
+              <div style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;">Alex_Pro</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);">142 Victories • 78% Win</div>
+            </div>
+          </div>
+          <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);">8,450 🪙</span>
+        </div>
       </div>
     </section>
 
-    <!-- ==================== 2. LOBBY SCREEN ==================== -->
-    <section id="screen-lobby" class="screen hidden">
-      <div class="lobby-code-card">
-        <span style="font-size:0.85rem; font-weight:700; color:var(--text-dim);" id="lbl-room-code">Room code</span>
-        <div class="huge-room-code" id="lobby-code-text" title="Tap to copy">B4K8M</div>
-        <span class="tap-copy-hint" id="lbl-tap-to-copy">Tap to copy code or share link</span>
-        
-        <div class="lobby-invite-row">
-          <button id="btn-share-link" class="btn-pill btn-secondary" style="flex:1;">
-            <span>📤</span> <span id="lbl-share">Share</span>
+    <!-- ==================== 2. PLAY / LOBBY SCREEN ==================== -->
+    <section id="screen-lobby" class="screen-view hidden">
+      <!-- Room Code Display Card -->
+      <div class="lobby-code-display-card">
+        <div class="lobby-code-label" id="lbl-room-code">Room Code</div>
+        <div class="huge-room-code-tag" id="lobby-code-text" title="Tap to copy">B4K8M</div>
+        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:12px;">Tap to copy code or share link with your friend</p>
+
+        <div style="display:flex; gap:8px;">
+          <button id="btn-share-link" class="btn-tactile btn-primary" style="flex:1;">
+            <span>📤</span> Share Link
           </button>
-          <button id="btn-copy-link" class="btn-pill btn-secondary" style="flex:1;">
-            <span>📋</span> Copy link
+          <button id="btn-copy-link" class="btn-tactile btn-secondary" style="flex:1;">
+            <span>📋</span> Copy
           </button>
-          <button id="btn-show-qr" class="icon-btn" aria-label="QR Code">
-            <span>📱</span>
+          <button id="btn-show-qr" class="icon-btn-round" aria-label="QR Code" title="Show QR Code">
+            📱
           </button>
         </div>
       </div>
 
-      <!-- Two Seats -->
-      <div class="lobby-seats">
-        <div class="seat-card" id="seat-player1">
-          <div class="seat-avatar" id="seat1-avatar">🦊</div>
-          <div class="seat-name" id="seat1-name">Host</div>
-          <span class="status-badge status-ready" id="seat1-status">Host</span>
+      <!-- Two Seats Container -->
+      <div class="lobby-seats-container">
+        <div class="player-seat-card" id="seat-player1">
+          <div class="seat-avatar-large" id="seat1-avatar">🦊</div>
+          <div class="seat-name-text" id="seat1-name">Host</div>
+          <span class="seat-status-pill ready" id="seat1-status">Host (Ready)</span>
         </div>
-        <div class="seat-card" id="seat-player2">
-          <div class="seat-avatar" id="seat2-avatar">⏳</div>
-          <div class="seat-name" id="seat2-name">Waiting...</div>
-          <span class="status-badge status-waiting" id="seat2-status">Waiting</span>
+
+        <div class="player-seat-card" id="seat-player2">
+          <div class="seat-avatar-large" id="seat2-avatar">⏳</div>
+          <div class="seat-name-text" id="seat2-name">Waiting...</div>
+          <span class="seat-status-pill waiting" id="seat2-status">Waiting</span>
         </div>
       </div>
 
       <!-- Host Turn Timer Selector -->
-      <div class="timer-selector-row" id="timer-settings-row">
-        <span id="lbl-turn-timer">Turn timer</span>
-        <div class="timer-chips">
-          <button class="timer-chip active" data-time="0">Off</button>
-          <button class="timer-chip" data-time="20">20s</button>
-          <button class="timer-chip" data-time="30">30s</button>
-          <button class="timer-chip" data-time="45">45s</button>
-        </div>
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <button id="btn-practice-bot" class="btn-pill btn-secondary">
-          <span>🤖</span> <span id="lbl-practice-bot">Practice vs Bot</span>
-        </button>
-        <button id="btn-toggle-ready" class="btn-pill btn-mint">
-          <span>✓</span> <span id="lbl-toggle-ready">Ready to play</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- ==================== 3. ARRANGE SCREEN ==================== -->
-    <section id="screen-arrange" class="screen hidden">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <h2 style="font-size:1.15rem; font-weight:800;" id="lbl-arrange-title">Arrange your card</h2>
-          <p style="font-size:0.85rem; color:var(--text-dim);" id="lbl-arrange-desc">Tap one cell, then another, to swap numbers.</p>
-        </div>
-        <span class="status-badge status-waiting" id="friend-arrange-badge">Friend arranging...</span>
-      </div>
-
-      <!-- Paper Sheet Card for Arrange Grid -->
-      <div class="paper-sheet-card">
-        <div class="board-container">
-          <div class="grid-board" id="arrange-grid-board">
-            <!-- 25 Interactive Swap Cells -->
+      <div class="game-card" id="timer-settings-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;" id="lbl-turn-timer">Turn Timer</span>
+          <div style="display:flex; gap:6px;">
+            <button class="timer-chip active" data-time="0" style="padding:4px 10px; border-radius:var(--radius-pill); border:1px solid var(--border-color); background:var(--primary-blue); color:#FFF; font-weight:800; font-size:0.8rem; cursor:pointer;">Off</button>
+            <button class="timer-chip" data-time="20" style="padding:4px 10px; border-radius:var(--radius-pill); border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-dark); font-weight:700; font-size:0.8rem; cursor:pointer;">20s</button>
+            <button class="timer-chip" data-time="30" style="padding:4px 10px; border-radius:var(--radius-pill); border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-dark); font-weight:700; font-size:0.8rem; cursor:pointer;">30s</button>
+            <button class="timer-chip" data-time="45" style="padding:4px 10px; border-radius:var(--radius-pill); border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-dark); font-weight:700; font-size:0.8rem; cursor:pointer;">45s</button>
           </div>
         </div>
       </div>
 
-      <div style="display:flex; gap:8px;">
-        <button id="btn-auto-arrange" class="btn-pill btn-secondary" style="flex:1;">
-          <span>🎲</span> <span id="lbl-auto-arrange">Auto arrange</span>
+      <!-- Action Buttons -->
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button id="btn-practice-bot" class="btn-tactile btn-secondary" style="width:100%;">
+          <span>🤖</span> Practice vs Bot
         </button>
-        <button id="btn-reset-arrange" class="btn-pill btn-secondary" style="flex:1;">
-          <span>↺</span> <span id="lbl-reset">Reset</span>
+        <button id="btn-toggle-ready" class="btn-tactile btn-mint" style="width:100%;">
+          <span>✓</span> Ready to Play
+        </button>
+        <button id="btn-leave-lobby" class="btn-tactile btn-secondary" style="width:100%;">
+          Leave Room
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== 3. NUMBER ARRANGEMENT SCREEN ==================== -->
+    <section id="screen-arrange" class="screen-view hidden">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="font-family:var(--font-display); font-size:1.35rem; font-weight:800;">Arrange Your Board</h2>
+          <p style="font-size:0.85rem; color:var(--text-secondary);">Tap one number, then another, to swap them.</p>
+        </div>
+        <span class="seat-status-pill waiting" id="friend-arrange-badge">Friend arranging...</span>
+      </div>
+
+      <!-- 5x5 Grid for Arrangement -->
+      <div class="board-game-container">
+        <div class="board-game-grid" id="arrange-grid-board">
+          <!-- 25 Interactive Swap Cells -->
+        </div>
+      </div>
+
+      <!-- Shuffle & Reset Buttons -->
+      <div style="display:flex; gap:8px;">
+        <button id="btn-auto-arrange" class="btn-tactile btn-secondary" style="flex:1;">
+          <span>🎲</span> Shuffle
+        </button>
+        <button id="btn-reset-arrange" class="btn-tactile btn-secondary" style="flex:1;">
+          <span>↺</span> Reset
         </button>
       </div>
 
-      <button id="btn-lock-board" class="btn-pill btn-mint" style="width:100%;">
-        <span>🔒</span> <span id="lbl-lock-board">Lock board</span>
+      <button id="btn-lock-board" class="btn-tactile btn-primary" style="width:100%; font-size:1.15rem;">
+        <span>🔒</span> Confirm & Lock Board
       </button>
     </section>
 
-    <!-- ==================== 4. GAMEPLAY SCREEN ==================== -->
-    <section id="screen-game" class="screen hidden">
-      <!-- Opponent strip on top -->
-      <header class="top opponent-game-strip">
-        <div class="opp opponent-profile">
-          <span class="av" id="game-opp-avatar" aria-hidden="true">🐻</span>
-          <div>
-            <div class="nm" id="game-opp-name">Friend</div>
-            <div class="ol"><span class="conn-dot" id="opponent-conn-dot" title="Connected"></span> <span id="opponent-conn-text">online</span></div>
+    <!-- ==================== 4. MAIN GAMEPLAY SCREEN (Strict NO-SCROLL) ==================== -->
+    <section id="screen-game" class="screen-view hidden gameplay-layout">
+      <!-- TOP MATCH HEADER -->
+      <div class="gameplay-top-bar">
+        <!-- Opponent Profile Pill -->
+        <div class="opponent-profile-chip">
+          <div class="opp-avatar-small" id="game-opp-avatar">🐻</div>
+          <div class="opp-meta">
+            <div class="opp-name" id="game-opp-name">Friend</div>
+            <div class="opp-status"><span class="conn-dot" id="opponent-conn-dot"></span> online</div>
           </div>
         </div>
-        <!-- Opponent's mini BINGO progress -->
-        <div class="mini opponent-bingo-mini" id="opponent-mini-bingo" role="img" aria-label="Opponent BINGO progress">
-          <span class="mw mini-letter" data-idx="0">B</span>
-          <span class="mw mini-letter" data-idx="1">I</span>
-          <span class="mw mini-letter" data-idx="2">N</span>
-          <span class="mw mini-letter" data-idx="3">G</span>
-          <span class="mw mini-letter" data-idx="4">O</span>
-        </div>
-      </header>
 
-      <!-- Turn indicator & calls -->
-      <div class="turn game-info-strip">
-        <div class="turn-pill my-turn" id="turn-indicator-pill">
-          <span id="turn-dot">●</span> <span id="turn-text">Teri baari</span>
-        </div>
-        <div class="turn-timer-clock" id="turn-clock-display" style="display:none;">
-          ⏱️ <span id="turn-clock-seconds">30</span>s
-        </div>
-        <div class="calls called-numbers-strip" id="called-numbers-strip" role="img" aria-label="Last called numbers">
+        <!-- Opponent Mini BINGO Progress -->
+        <div class="opp-bingo-mini" id="opponent-mini-bingo" aria-label="Opponent BINGO progress">
+          <div class="opp-mini-letter" data-idx="0">B</div>
+          <div class="opp-mini-letter" data-idx="1">I</div>
+          <div class="opp-mini-letter" data-idx="2">N</div>
+          <div class="opp-mini-letter" data-idx="3">G</div>
+          <div class="opp-mini-letter" data-idx="4">O</div>
         </div>
       </div>
 
-      <!-- Paper Sheet Card for Board & Letter Strikes -->
-      <section class="sheet paper-sheet-card">
-        <!-- B-I-N-G-O letters above grid -->
-        <div class="word bingo-letters-row" id="player-bingo-row" role="img" aria-label="BINGO letters">
-          <span class="w bingo-letter-box" data-letter="B"><span class="letter-glyph">B</span><i class="x letter-strike-line"></i></span>
-          <span class="w bingo-letter-box" data-letter="I"><span class="letter-glyph">I</span><i class="x letter-strike-line"></i></span>
-          <span class="w bingo-letter-box" data-letter="N"><span class="letter-glyph">N</span><i class="x letter-strike-line"></i></span>
-          <span class="w bingo-letter-box" data-letter="G"><span class="letter-glyph">G</span><i class="x letter-strike-line"></i></span>
-          <span class="w bingo-letter-box" data-letter="O"><span class="letter-glyph">O</span><i class="x letter-strike-line"></i></span>
+      <!-- TURN STATUS & TIMER STRIP -->
+      <div class="turn-status-strip">
+        <div class="turn-badge my-turn" id="turn-indicator-pill">
+          <span id="turn-dot">●</span> <span id="turn-text">Your turn</span>
         </div>
-
-        <!-- 5x5 Grid Board with SVG Line Cut Overlay -->
-        <div class="gw board-container">
-          <div class="grid grid-board" id="game-grid-board">
-            <!-- 25 Number Cells -->
-          </div>
-          <!-- Continuous Slanted Red Pen Stroke Overlay -->
-          <svg 
-            id="line-strike-overlay" 
-            class="line-strike-overlay" 
-            viewBox="-20 -20 540 540" 
-            preserveAspectRatio="xMidYMid meet"
-            aria-hidden="true"
-          ></svg>
+        <div class="timer-clock" id="turn-clock-display" style="display:none;">
+          ⏱️ <span id="turn-clock-seconds">30</span>s
         </div>
-      </section>
+      </div>
 
-      <!-- Central BINGO Button -->
-      <div class="bingo-button-container">
-        <button id="bingo-claim-btn" class="btn bingo bingo-center-btn locked" disabled aria-label="Claim Bingo">
+      <!-- CENTER TOP: LARGE BINGO LETTERS ROW -->
+      <div class="bingo-word-row" id="player-bingo-row" role="img" aria-label="BINGO word strikes">
+        <div class="bingo-letter-tile" data-letter="B"><span class="letter-char">B</span><span class="letter-strike-slash"></span></div>
+        <div class="bingo-letter-tile" data-letter="I"><span class="letter-char">I</span><span class="letter-strike-slash"></span></div>
+        <div class="bingo-letter-tile" data-letter="N"><span class="letter-char">N</span><span class="letter-strike-slash"></span></div>
+        <div class="bingo-letter-tile" data-letter="G"><span class="letter-char">G</span><span class="letter-strike-slash"></span></div>
+        <div class="bingo-letter-tile" data-letter="O"><span class="letter-char">O</span><span class="letter-strike-slash"></span></div>
+      </div>
+
+      <!-- MAIN 5x5 BOARD GAME GRID WITH CONTINUOUS SVG CUT OVERLAY -->
+      <div class="board-game-container">
+        <div class="board-game-grid" id="game-grid-board">
+          <!-- 25 Number Tiles generated here -->
+        </div>
+        <!-- Continuous Slanted Red Pen Stroke Overlay -->
+        <svg 
+          id="line-strike-overlay" 
+          class="svg-strike-overlay" 
+          viewBox="-20 -20 540 540" 
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        ></svg>
+      </div>
+
+      <!-- CENTRAL BINGO CLAIM BUTTON -->
+      <div class="bingo-claim-container">
+        <button id="bingo-claim-btn" class="bingo-claim-btn locked" disabled aria-label="Claim Bingo">
           <span id="bingo-btn-text">BINGO</span>
-          <span class="pips" id="bingo-pips">
-            <i></i><i></i><i></i><i></i><i></i>
-          </span>
+          <div class="bingo-pips-row" id="bingo-pips">
+            <span class="bingo-pip"></span>
+            <span class="bingo-pip"></span>
+            <span class="bingo-pip"></span>
+            <span class="bingo-pip"></span>
+            <span class="bingo-pip"></span>
+          </div>
         </button>
       </div>
 
-      <!-- Quick Reactions Row (6-8 preset emojis, no free text) -->
-      <div class="reactions-row">
-        <button class="reaction-btn" data-emoji="🔥">🔥</button>
-        <button class="reaction-btn" data-emoji="👏">👏</button>
-        <button class="reaction-btn" data-emoji="😮">😮</button>
-        <button class="reaction-btn" data-emoji="😂">😂</button>
-        <button class="reaction-btn" data-emoji="🎯">🎯</button>
-        <button class="reaction-btn" data-emoji="💀">💀</button>
-        <button class="reaction-btn" data-emoji="⚡">⚡</button>
-        <button class="reaction-btn" data-emoji="🍀">🍀</button>
+      <!-- BOTTOM TRAY: RECENT CALLS CHIPS + REACTION EMOTES -->
+      <div class="gameplay-bottom-tray">
+        <div class="recent-calls-chips" id="called-numbers-strip" aria-label="Recent calls">
+          <span style="font-size:0.75rem; font-weight:800; color:var(--text-secondary); margin-right:2px;">Calls:</span>
+        </div>
+
+        <div class="reaction-emotes-bar">
+          <button class="emote-btn" data-emoji="🔥">🔥</button>
+          <button class="emote-btn" data-emoji="👏">👏</button>
+          <button class="emote-btn" data-emoji="😮">😮</button>
+          <button class="emote-btn" data-emoji="😂">😂</button>
+          <button class="emote-btn" data-emoji="⚡">⚡</button>
+        </div>
       </div>
     </section>
 
-    <!-- ==================== 5. RESULT SCREEN ==================== -->
-    <section id="screen-result" class="screen hidden">
-      <div class="home-hero-card" style="padding:28px 20px;">
-        <div style="font-size:3.5rem;" id="result-emoji">🏆</div>
-        <h2 style="font-family:var(--font-hand); font-size:2.4rem; color:var(--gold-top);" id="result-title">VICTORY!</h2>
-        <p style="color:var(--text-dim); font-size:1.05rem;" id="result-desc">You completed 5 lines and claimed BINGO!</p>
+    <!-- ==================== 5. TOURNAMENT SCREENS ==================== -->
+    <section id="screen-tournaments" class="screen-view hidden">
+      <div class="tourn-tabs-bar">
+        <button class="tourn-tab active" id="tab-tourn-knockout">🥊 Knockout Bracket</button>
+        <button class="tourn-tab" id="tab-tourn-league">📋 League Table</button>
+      </div>
 
-        <!-- Series Scores -->
-        <div style="display:flex; gap:16px; align-items:center; background:rgba(255,255,255,0.08); padding:10px 20px; border-radius:12px;">
-          <span style="font-weight:700;" id="score-player1">You: 0</span>
-          <span style="color:var(--text-muted);">—</span>
-          <span style="font-weight:700;" id="score-player2">Friend: 0</span>
+      <!-- Knockout View -->
+      <div id="tourn-knockout-view">
+        <div class="game-card" style="margin-bottom:12px; background:linear-gradient(135deg, #FFC857, #FFA927); color:var(--text-dark);">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Cobalt Cup Knockout</div>
+          <div style="font-size:0.85rem; font-weight:700;">8 Players • Winner takes 2,500 🪙 • Single Elimination</div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-top:8px;">
-          <button id="btn-rematch" class="btn-pill btn-primary">
-            <span>↺</span> <span id="lbl-rematch">Rematch</span>
+        <!-- Interactive Knockout Bracket Rounds -->
+        <div class="bracket-rounds-wrapper" id="knockout-bracket-container">
+          <!-- Bracket cards dynamically injected -->
+        </div>
+
+        <button class="btn-tactile btn-primary" id="btn-enter-knockout" style="width:100%; margin-top:8px;">
+          <span>🏆</span> Enter Tournament (100 🪙)
+        </button>
+      </div>
+
+      <!-- League View -->
+      <div id="tourn-league-view" style="display:none;">
+        <div class="game-card" style="margin-bottom:12px; background:var(--primary-blue); color:#FFFFFF;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1.25rem;">Premier Bingo League</div>
+          <div style="font-size:0.85rem; opacity:0.9;">Season 1 • 8 Contenders • Top 3 Win Big</div>
+        </div>
+
+        <div class="league-table-card">
+          <table class="league-table" id="league-table-body">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>MP</th>
+                <th>W</th>
+                <th>L</th>
+                <th>PTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dynamic Rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 6. LEADERBOARD SCREEN ==================== -->
+    <section id="screen-leaderboard" class="screen-view hidden">
+      <div class="tourn-tabs-bar">
+        <button class="tourn-tab active" id="tab-lead-global">🌐 Global</button>
+        <button class="tourn-tab" id="tab-lead-friends">👥 Friends</button>
+        <button class="tourn-tab" id="tab-lead-weekly">📅 Weekly</button>
+      </div>
+
+      <!-- Top 3 Podium Visual -->
+      <div class="podium-container" id="podium-display">
+        <!-- Step 2: Silver -->
+        <div class="podium-step silver" id="podium-silver">
+          <div class="podium-avatar" id="silver-avatar">🦊</div>
+          <div class="podium-name" id="silver-name">Rohit</div>
+          <div class="podium-badge silver">2nd • 6,920 🪙</div>
+        </div>
+
+        <!-- Step 1: Gold -->
+        <div class="podium-step gold" id="podium-gold">
+          <div style="font-size:1.5rem; line-height:1; margin-bottom:2px;">👑</div>
+          <div class="podium-avatar" id="gold-avatar">⚡</div>
+          <div class="podium-name" id="gold-name">Alex_Pro</div>
+          <div class="podium-badge gold">1st • 8,450 🪙</div>
+        </div>
+
+        <!-- Step 3: Bronze -->
+        <div class="podium-step bronze" id="podium-bronze">
+          <div class="podium-avatar" id="bronze-avatar">⭐</div>
+          <div class="podium-name" id="bronze-name">LuckyStar</div>
+          <div class="podium-badge bronze">3rd • 5,800 🪙</div>
+        </div>
+      </div>
+
+      <!-- Rankings List #4..#10 -->
+      <div class="rank-list-card" id="rank-list-items">
+        <!-- Injected dynamically -->
+      </div>
+
+      <!-- Sticky User Rank Bar -->
+      <div class="game-card" style="margin-top:4px; display:flex; justify-content:space-between; align-items:center; background:var(--primary-blue-light); border-color:rgba(49,87,213,0.3);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-family:var(--font-display); font-weight:800; font-size:1.1rem; color:var(--primary-blue);">#14</span>
+          <div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:0.9rem;" id="user-rank-name">You</div>
+            <div style="font-size:0.75rem; color:var(--text-secondary);">28 Wins • 68% Win Rate</div>
+          </div>
+        </div>
+        <span style="font-family:var(--font-display); font-weight:800; color:var(--primary-blue);" id="user-rank-coins">500 🪙</span>
+      </div>
+    </section>
+
+    <!-- ==================== 7. PROFILE & STATISTICS SCREEN ==================== -->
+    <section id="screen-profile" class="screen-view hidden">
+      <!-- Player Header Card -->
+      <div class="profile-card-hero">
+        <div class="profile-avatar-big" id="profile-page-avatar">🦊</div>
+        <div style="flex:1;">
+          <h2 class="profile-name-text" id="profile-page-name">Player</h2>
+          <div class="profile-id-sub" id="profile-page-id">ID: #BGO-7829</div>
+          <button class="btn-tactile btn-secondary" id="btn-edit-profile-open" style="padding:4px 12px; font-size:0.8rem; margin-top:8px;">
+            ✏️ Edit Profile
           </button>
-          <button id="btn-share-result" class="btn-pill btn-secondary">
-            <span>📤</span> <span id="lbl-share-result">Share result</span>
+        </div>
+      </div>
+
+      <!-- 2x2 Statistics Grid -->
+      <div class="stats-grid-2x2">
+        <div class="stat-metric-card">
+          <span class="stat-metric-label">Total Matches</span>
+          <span class="stat-metric-val" id="stat-total-matches">42</span>
+        </div>
+        <div class="stat-metric-card">
+          <span class="stat-metric-label">Total Victories</span>
+          <span class="stat-metric-val" id="stat-total-wins">28</span>
+        </div>
+        <div class="stat-metric-card">
+          <span class="stat-metric-label">Win Percentage</span>
+          <span class="stat-metric-val" id="stat-win-rate">68%</span>
+        </div>
+        <div class="stat-metric-card">
+          <span class="stat-metric-label">Win Streak</span>
+          <span class="stat-metric-val" id="stat-win-streak">🔥 3</span>
+        </div>
+      </div>
+
+      <!-- Coin Wallet & History Card -->
+      <div class="game-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1rem;">Coin Transaction History</div>
+          <span style="font-family:var(--font-display); font-weight:800; color:var(--gold-dark);" id="profile-coin-balance">500 🪙</span>
+        </div>
+        <div id="coin-history-list" style="display:flex; flex-direction:column; gap:8px;">
+          <!-- Dynamically populated transaction history -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 8. RESULT / VICTORY SCREEN ==================== -->
+    <section id="screen-result" class="screen-view hidden">
+      <div class="game-card" style="text-align:center; padding:28px 18px;">
+        <div style="font-size:4rem; margin-bottom:8px;" id="result-emoji">🏆</div>
+        <h2 style="font-family:var(--font-display); font-size:2rem; font-weight:800; margin-bottom:4px;" id="result-title">Victory!</h2>
+        <p style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:16px;" id="result-desc">5 Lines Completed Authority Verified.</p>
+
+        <!-- Reward Callout -->
+        <div style="background:var(--gold-light); border:1px solid #FFE7A8; border-radius:14px; padding:12px; margin-bottom:18px;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:1.4rem; color:var(--gold-dark);">+150 🪙 Won!</div>
+          <div style="font-size:0.8rem; color:var(--text-secondary);">Added to your virtual coin balance</div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button id="btn-rematch" class="btn-tactile btn-primary" style="flex:1;">
+            <span>↺</span> Play Again
           </button>
-          <button id="btn-leave-room" class="btn-pill btn-secondary">
-            <span id="lbl-leave">Leave room</span>
+          <button id="btn-home-from-result" class="btn-tactile btn-secondary" style="flex:1;">
+            <span>🏠</span> Home
           </button>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- ==================== BOTTOM NAVIGATION DOCK (Section 14) ==================== -->
+  <nav class="bottom-nav" id="main-bottom-nav">
+    <button class="nav-item active" id="nav-home" data-tab="home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" id="nav-play" data-tab="lobby">
+      <span class="nav-icon">🎮</span>
+      <span class="nav-label">Play</span>
+    </button>
+    <button class="nav-item" id="nav-tournaments" data-tab="tournaments">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Tournaments</span>
+    </button>
+    <button class="nav-item" id="nav-leaderboard" data-tab="leaderboard">
+      <span class="nav-icon">🏅</span>
+      <span class="nav-label">Leaderboard</span>
+    </button>
+    <button class="nav-item" id="nav-profile" data-tab="profile">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </button>
+  </nav>
+
   <!-- ==================== MODALS ==================== -->
 
-  <!-- Profile & Avatar Picker Modal -->
-  <div id="modal-profile" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-box">
-      <div class="modal-title-row">
-        <h3 class="modal-title">Edit Profile</h3>
-        <button class="icon-btn modal-close" data-close="modal-profile">✕</button>
-      </div>
-      <div>
-        <label for="input-nickname" style="font-size:0.85rem; font-weight:700; color:var(--text-dim);">Nickname (Max 16 chars)</label>
-        <input type="text" id="input-nickname" class="code-box-input" style="width:100%; height:46px; font-size:1.1rem; text-align:left; padding:0 12px; margin-top:4px;" maxlength="16">
-      </div>
-      <div>
-        <span style="font-size:0.85rem; font-weight:700; color:var(--text-dim);">Pick Avatar</span>
-        <div class="avatar-grid" id="avatar-picker-grid" style="margin-top:6px;">
-          <div class="avatar-opt" data-avatar="🦊">🦊</div>
-          <div class="avatar-opt" data-avatar="🐻">🐻</div>
-          <div class="avatar-opt" data-avatar="🐯">🐯</div>
-          <div class="avatar-opt" data-avatar="🦁">🦁</div>
-          <div class="avatar-opt" data-avatar="🐼">🐼</div>
-          <div class="avatar-opt" data-avatar="🦄">🦄</div>
-          <div class="avatar-opt" data-avatar="🤖">🤖</div>
-          <div class="avatar-opt" data-avatar="⚡">⚡</div>
-        </div>
-      </div>
-      <button id="btn-save-profile" class="btn-pill btn-primary" style="width:100%;">Save</button>
+  <!-- 1. Quick Matchmaking Radar Modal -->
+  <div id="modal-matchmaking" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card matchmaking-radar-box">
+      <div class="radar-circle">⚡</div>
+      <h3 style="font-family:var(--font-display); font-size:1.35rem; font-weight:800;">Finding Opponent...</h3>
+      <p style="font-size:0.85rem; color:var(--text-secondary);">Connecting to players worldwide on 1v1 quick match.</p>
+      <button class="btn-tactile btn-secondary modal-close" data-close="modal-matchmaking" style="width:100%;">Cancel</button>
     </div>
   </div>
 
-  <!-- Settings Modal (Language, Theme, Sound, Vibration, Reduced Motion) -->
-  <div id="modal-settings" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-box">
-      <div class="modal-title-row">
-        <h3 class="modal-title" id="lbl-settings-title">Settings</h3>
-        <button class="icon-btn modal-close" data-close="modal-settings">✕</button>
-      </div>
-      
-      <!-- Language -->
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="lbl-setting-lang" style="font-weight:700;">Language</span>
-        <div style="display:flex; gap:6px;">
-          <button class="timer-chip" id="btn-lang-en">English</button>
-          <button class="timer-chip" id="btn-lang-hi">हिन्दी</button>
-        </div>
-      </div>
-
-      <!-- Theme Background -->
-      <div>
-        <span id="lbl-setting-bg" style="font-weight:700; font-size:0.95rem;">Background Theme</span>
-        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-top:6px;">
-          <button class="timer-chip" data-theme-val="indigo">Night Indigo</button>
-          <button class="timer-chip" data-theme-val="ocean">Ocean Blue</button>
-          <button class="timer-chip" data-theme-val="plum">Plum Violet</button>
-          <button class="timer-chip" data-theme-val="forest">Forest Green</button>
-        </div>
-      </div>
-
-      <!-- Sound Toggle -->
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="lbl-setting-sound" style="font-weight:700;">Sound effects</span>
-        <input type="checkbox" id="toggle-sound" style="width:20px; height:20px;" checked>
-      </div>
-
-      <!-- Vibration Toggle -->
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="lbl-setting-vibrate" style="font-weight:700;">Vibration</span>
-        <input type="checkbox" id="toggle-vibration" style="width:20px; height:20px;" checked>
-      </div>
-
-      <!-- Reduced Motion -->
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="lbl-setting-motion" style="font-weight:700;">Reduce motion</span>
-        <input type="checkbox" id="toggle-reduced-motion" style="width:20px; height:20px;">
-      </div>
-
-      <button class="btn-pill btn-secondary modal-close" data-close="modal-settings" style="width:100%;" id="lbl-close-settings">Close</button>
+  <!-- 2. Daily Reward Modal -->
+  <div id="modal-daily-reward" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="text-align:center;">
+      <div style="font-size:3.5rem;">🎁</div>
+      <h3 style="font-family:var(--font-display); font-size:1.4rem; font-weight:800;">Daily Gift Claimed!</h3>
+      <p style="font-size:0.9rem; color:var(--text-secondary);">You received 100 free virtual coins. Come back tomorrow for more!</p>
+      <div style="font-family:var(--font-display); font-size:1.8rem; font-weight:800; color:var(--gold-dark); margin:6px 0;">+100 🪙</div>
+      <button class="btn-tactile btn-primary modal-close" data-close="modal-daily-reward" style="width:100%;">Awesome!</button>
     </div>
   </div>
 
-  <!-- How to Play Modal (3 Short Steps) -->
-  <div id="modal-how-to-play" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-box">
-      <div class="modal-title-row">
-        <h3 class="modal-title" id="lbl-how-title">How to Play</h3>
-        <button class="icon-btn modal-close" data-close="modal-how-to-play">✕</button>
-      </div>
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <div style="background:rgba(255,255,255,0.06); padding:12px; border-radius:12px;">
-          <h4 style="color:var(--gold-top); font-size:1rem;" id="rule-1-title">1. Arrange</h4>
-          <p style="font-size:0.9rem; color:var(--text-dim); margin-top:2px;" id="rule-1-desc">Swap numbers 1-25 on your paper card or use Auto Arrange, then lock your card.</p>
-        </div>
-        <div style="background:rgba(255,255,255,0.06); padding:12px; border-radius:12px;">
-          <h4 style="color:var(--gold-top); font-size:1rem;" id="rule-2-title">2. Cut Lines</h4>
-          <p style="font-size:0.9rem; color:var(--text-dim); margin-top:2px;" id="rule-2-desc">Take turns calling numbers. Completing any row or column draws a red pen stroke and strikes letters B-I-N-G-O.</p>
-        </div>
-        <div style="background:rgba(255,255,255,0.06); padding:12px; border-radius:12px;">
-          <h4 style="color:var(--gold-top); font-size:1rem;" id="rule-3-title">3. Claim BINGO</h4>
-          <p style="font-size:0.9rem; color:var(--text-dim); margin-top:2px;" id="rule-3-desc">When all 5 letters are struck, the golden BINGO button unlocks. Tap it first to win!</p>
-        </div>
-      </div>
-      <button class="btn-pill btn-primary modal-close" data-close="modal-how-to-play" style="width:100%;">Got it!</button>
-    </div>
-  </div>
-
-  <!-- QR Code Modal -->
+  <!-- 3. QR Code Modal -->
   <div id="modal-qr" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-box" style="align-items:center; text-align:center;">
-      <div class="modal-title-row" style="width:100%;">
-        <h3 class="modal-title">Scan to Join</h3>
-        <button class="icon-btn modal-close" data-close="modal-qr">✕</button>
-      </div>
-      <div id="qr-container" style="padding:10px; background:#ffffff; border-radius:16px;"></div>
-      <p style="font-size:0.9rem; color:var(--text-dim);">Point your phone camera at this QR code to join immediately.</p>
-      <button class="btn-pill btn-secondary modal-close" data-close="modal-qr" style="width:100%;">Close</button>
+    <div class="modal-card" style="text-align:center;">
+      <h3 style="font-family:var(--font-display); font-size:1.25rem; font-weight:800;">Scan to Join</h3>
+      <div id="qr-container" style="display:flex; justify-content:center; padding:10px; background:#FFFFFF; border-radius:14px; border:1px solid var(--border-color);"></div>
+      <p style="font-size:0.85rem; color:var(--text-secondary);">Scan with phone camera to open game link directly.</p>
+      <button class="btn-tactile btn-secondary modal-close" data-close="modal-qr" style="width:100%;">Close</button>
     </div>
   </div>
 
-  <!-- Screen reader live announcer -->
-  <div id="aria-live-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <!-- 4. Profile Edit Modal -->
+  <div id="modal-profile" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3 style="font-family:var(--font-display); font-size:1.25rem; font-weight:800;">Edit Profile</h3>
+      <div>
+        <label for="input-nickname" style="font-size:0.85rem; font-weight:700; color:var(--text-secondary);">Nickname</label>
+        <input type="text" id="input-nickname" maxlength="16" style="width:100%; padding:10px 14px; border-radius:12px; border:1.5px solid var(--border-color); font-family:var(--font-display); font-size:1rem; font-weight:700; outline:none; margin-top:4px;">
+      </div>
+      <div>
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-secondary);">Choose Avatar</label>
+        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-top:6px;">
+          <button class="avatar-opt" data-avatar="🦊" style="font-size:1.6rem; padding:8px; border-radius:12px; border:2px solid var(--border-color); background:var(--bg-card); cursor:pointer;">🦊</button>
+          <button class="avatar-opt" data-avatar="🐻" style="font-size:1.6rem; padding:8px; border-radius:12px; border:2px solid var(--border-color); background:var(--bg-card); cursor:pointer;">🐻</button>
+          <button class="avatar-opt" data-avatar="🐯" style="font-size:1.6rem; padding:8px; border-radius:12px; border:2px solid var(--border-color); background:var(--bg-card); cursor:pointer;">🐯</button>
+          <button class="avatar-opt" data-avatar="🐼" style="font-size:1.6rem; padding:8px; border-radius:12px; border:2px solid var(--border-color); background:var(--bg-card); cursor:pointer;">🐼</button>
+          <button class="avatar-opt" data-avatar="🐰" style="font-size:1.6rem; padding:8px; border-radius:12px; border:2px solid var(--border-color); background:var(--bg-card); cursor:pointer;">🐰</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-tactile btn-secondary modal-close" data-close="modal-profile" style="flex:1;">Cancel</button>
+        <button class="btn-tactile btn-primary" id="btn-save-profile" style="flex:1;">Save</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Toast notification container -->
+  <!-- 5. Settings Modal -->
+  <div id="modal-settings" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3 style="font-family:var(--font-display); font-size:1.25rem; font-weight:800;">Settings</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700;">Sound Effects</span>
+        <input type="checkbox" id="toggle-sound" checked style="width:20px; height:20px;">
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700;">Vibration (Haptics)</span>
+        <input type="checkbox" id="toggle-vibration" checked style="width:20px; height:20px;">
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700;">Language</span>
+        <div style="display:flex; gap:6px;">
+          <button class="timer-chip active" id="btn-lang-en" style="padding:4px 10px; border-radius:var(--radius-pill); border:1px solid var(--border-color); background:var(--primary-blue); color:#FFF; font-weight:800; cursor:pointer;">EN</button>
+          <button class="timer-chip" id="btn-lang-hi" style="padding:4px 10px; border-radius:var(--radius-pill); border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-dark); font-weight:700; cursor:pointer;">हिन्दी</button>
+        </div>
+      </div>
+      <button class="btn-tactile btn-secondary modal-close" data-close="modal-settings" style="width:100%;">Done</button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container" aria-live="assertive"></div>
 
-  <!-- Client Application Script -->
+  <!-- Application Client Script -->
   <script type="module" src="/js/gameClient.js"></script>
 </body>
 </html>

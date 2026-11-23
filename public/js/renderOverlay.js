@@ -60,7 +60,7 @@ export class RenderOverlay {
         const rect = letterEl.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
           const geom = calculateLetterStrokeGeometry(rect, 0.10);
-          const strikeLine = letterEl.querySelector('.letter-strike-line');
+          const strikeLine = letterEl.querySelector('.letter-strike-slash, .letter-strike-line, .x');
           if (strikeLine) {
             strikeLine.style.setProperty('--stroke-length', `${Math.round(geom.length)}px`);
             strikeLine.style.setProperty('--stroke-angle', `${geom.angleDeg.toFixed(1)}deg`);
@@ -158,7 +158,7 @@ export class RenderOverlay {
     if (!letterEl) return;
 
     letterEl.classList.add('struck', 's', 'instant');
-    const strikeLine = letterEl.querySelector('.letter-strike-line, .x');
+    const strikeLine = letterEl.querySelector('.letter-strike-slash, .letter-strike-line, .x');
     if (strikeLine) {
       strikeLine.style.clipPath = 'inset(0 0 0 0)';
     }
@@ -249,7 +249,7 @@ export class RenderOverlay {
     soundManager.playLetterStrike();
 
     letterEl.classList.add('striking');
-    const strikeLine = letterEl.querySelector('.letter-strike-line, .x');
+    const strikeLine = letterEl.querySelector('.letter-strike-slash, .letter-strike-line, .x');
 
     if (strikeLine && duration > 0) {
       const anim = strikeLine.animate(
