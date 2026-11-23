@@ -1,0 +1,105 @@
+/**
+ * public/css/components/modals.css
+ * Popups, overlays, and matchmaking radar modal
+ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(17, 24, 39, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+.modal-card {
+  background: #FFFFFF;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: pop-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Matchmaking Radar Animation */
+.matchmaking-radar-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.radar-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, var(--primary-blue), #2579F2);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(23, 105, 224, 0.4);
+}
+
+.radar-circle::before,
+.radar-circle::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--primary-blue);
+  animation: radar-ripple 2s linear infinite;
+  pointer-events: none;
+}
+
+.radar-circle::after {
+  animation-delay: 1s;
+}
+
+/* Match Found VS Presentation */
+.vs-presentation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  padding: 16px 8px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-lg);
+  margin-top: 6px;
+}
+
+.vs-player-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.vs-badge-clash {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--accent-orange), var(--coral-red));
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(255, 85, 85, 0.4);
+}

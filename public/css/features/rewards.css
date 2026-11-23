@@ -1,0 +1,45 @@
+/**
+ * public/css/features/rewards.css
+ * Daily Login Rewards & Coin History UI
+ */
+
+.coin-transaction-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+}
+
+.coin-tx-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.coin-tx-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+}
+
+.coin-tx-time {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.coin-tx-amount {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+
+.coin-tx-amount.positive {
+  color: var(--mint-green-dark);
+}
+
+.coin-tx-amount.negative {
+  color: var(--coral-red);
+}

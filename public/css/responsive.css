@@ -1,0 +1,147 @@
+/**
+ * public/css/responsive.css
+ * Comprehensive Breakpoints & Multi-Device Optimization
+ * Tested across 320x568, 360x800, 390x844, 430x932, 768x1024, 1024x1366, 1366x768, 1920x1080
+ */
+
+/* 1. Small Mobile Displays (320px - 360px width, e.g. iPhone SE 1st gen) */
+@media (max-width: 360px) {
+  :root {
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+  }
+
+  .app-container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .hero-title {
+    font-size: 1.45rem;
+  }
+
+  .hero-tile {
+    width: 36px;
+    height: 40px;
+    font-size: 1.05rem;
+  }
+
+  .modes-grid {
+    gap: 8px;
+  }
+
+  .mode-card {
+    padding: 12px 10px;
+  }
+
+  .mode-icon-circle {
+    width: 38px;
+    height: 38px;
+    font-size: 1.25rem;
+  }
+
+  .gameplay-layout .board-game-container {
+    width: min(94vw, calc(100dvh - 280px), 330px);
+  }
+
+  .bingo-letter-tile {
+    width: 38px;
+    height: 42px;
+    font-size: 1.3rem;
+  }
+
+  .bingo-claim-btn {
+    height: 46px;
+    font-size: 1.1rem;
+  }
+}
+
+/* 2. Short Height Screens (< 680px height, landscape or older devices) */
+@media (max-height: 680px) {
+  .app-container.gameplay-active {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .gameplay-layout {
+    gap: 4px;
+  }
+
+  .gameplay-top-bar {
+    padding: 2px 6px;
+  }
+
+  .opp-avatar-small {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .bingo-letter-tile {
+    height: 38px;
+    font-size: 1.2rem;
+  }
+
+  .gameplay-layout .board-game-container {
+    width: min(88vw, calc(100dvh - 250px), 320px);
+  }
+
+  .bingo-claim-btn {
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  .gameplay-bottom-tray {
+    padding: 2px 6px;
+  }
+}
+
+/* 3. Tablets & Large Phones (width >= 600px, e.g. iPads, Android Tablets) */
+@media (min-width: 600px) {
+  .app-container {
+    max-width: 580px;
+  }
+
+  .modes-grid {
+    gap: 14px;
+  }
+
+  .mode-card {
+    padding: 18px 16px;
+  }
+
+  .gameplay-layout .board-game-container {
+    max-width: 420px;
+  }
+}
+
+/* 4. Desktop / Laptop (width >= 1024px) */
+@media (min-width: 1024px) {
+  .app-container {
+    max-width: 620px;
+  }
+
+  /* Enhanced desktop tactile hover */
+  .btn-tactile:hover {
+    filter: brightness(1.06);
+    transform: translateY(-2px);
+  }
+
+  .btn-tactile:active {
+    transform: translateY(3px);
+  }
+
+  .mode-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card-elevated);
+  }
+}
+
+/* 5. Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

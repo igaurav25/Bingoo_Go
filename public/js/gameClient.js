@@ -240,6 +240,18 @@ class BingoApp {
 
       // Modals
       modalMatchmaking: document.getElementById('modal-matchmaking'),
+      matchmakingSearchState: document.getElementById('matchmaking-search-state'),
+      matchmakingFoundState: document.getElementById('matchmaking-found-state'),
+      vsP1Avatar: document.getElementById('vs-p1-avatar'),
+      vsP1Name: document.getElementById('vs-p1-name'),
+      vsP2Avatar: document.getElementById('vs-p2-avatar'),
+      vsP2Name: document.getElementById('vs-p2-name'),
+      vsCountdown: document.getElementById('vs-countdown'),
+      lobbyPlayerBar: document.getElementById('lobby-player-bar'),
+      lobbyAvatarChip: document.getElementById('lobby-avatar-chip'),
+      lobbyLevelBadge: document.getElementById('lobby-level-badge'),
+      lobbyPlayerName: document.getElementById('lobby-player-name'),
+      lobbyXpFill: document.getElementById('lobby-xp-fill'),
       modalDailyReward: document.getElementById('modal-daily-reward'),
       modalProfile: document.getElementById('modal-profile'),
       inputNickname: document.getElementById('input-nickname'),
@@ -763,6 +775,16 @@ class BingoApp {
     if (this.dom.profileCoinBalance) this.dom.profileCoinBalance.textContent = `${this.coinBalance.toLocaleString()} 🪙`;
     if (this.dom.userRankCoins) this.dom.userRankCoins.textContent = `${this.coinBalance.toLocaleString()} 🪙`;
     if (this.dom.userRankName) this.dom.userRankName.textContent = this.nickname;
+
+    // BGMI-inspired Lobby Level & XP Progress
+    if (this.dom.lobbyAvatarChip) this.dom.lobbyAvatarChip.textContent = this.avatar;
+    if (this.dom.lobbyPlayerName) this.dom.lobbyPlayerName.textContent = this.nickname;
+    const wins = Number(localStorage.getItem('bingo_stat_wins')) || 28;
+    const level = Math.max(1, Math.floor(wins / 3) + 1);
+    const xpInLevel = (wins * 45) % 1000;
+    const xpPercent = Math.min(100, Math.max(15, Math.round((xpInLevel / 1000) * 100)));
+    if (this.dom.lobbyLevelBadge) this.dom.lobbyLevelBadge.textContent = `Lv. ${level}`;
+    if (this.dom.lobbyXpFill) this.dom.lobbyXpFill.style.width = `${xpPercent}%`;
   }
 
   _showScreen(screenName) {
@@ -866,6 +888,8 @@ class BingoApp {
 
   startQuickMatch() {
     this._unlockAudio();
+    if (this.dom.matchmakingSearchState) this.dom.matchmakingSearchState.style.display = 'flex';
+    if (this.dom.matchmakingFoundState) this.dom.matchmakingFoundState.style.display = 'none';
     if (this.dom.modalMatchmaking) {
       this.dom.modalMatchmaking.classList.remove('hidden');
     }
@@ -879,12 +903,34 @@ class BingoApp {
     clearTimeout(this._quickMatchBotTimeout);
     this._quickMatchBotTimeout = setTimeout(() => {
       if (this.currentRoom && this.currentRoom.players.length === 1 && this.status === 'lobby') {
-        this._send('add_bot');
-        if (this.dom.modalMatchmaking) {
-          this.dom.modalMatchmaking.classList.add('hidden');
-        }
+        this._showMatchFoundVS('🤖 Bot_Racer');
+        setTimeout(() => {
+          this._send('add_bot');
+        }, 1200);
       }
-    }, 2200);
+    }, 2000);
+  }
+
+  _showMatchFoundVS(oppName = 'Opponent') {
+    if (this.dom.matchmakingSearchState) this.dom.matchmakingSearchState.style.display = 'none';
+    if (this.dom.matchmakingFoundState) {
+      this.dom.matchmakingFoundState.style.display = 'flex';
+      if (this.dom.vsP1Avatar) this.dom.vsP1Avatar.textContent = this.avatar;
+      if (this.dom.vsP1Name) this.dom.vsP1Name.textContent = this.nickname;
+      if (this.dom.vsP2Avatar) this.dom.vsP2Avatar.textContent = oppName.includes('Bot') ? '🤖' : '🐻';
+      if (this.dom.vsP2Name) this.dom.vsP2Name.textContent = oppName;
+
+      let count = 3;
+      if (this.dom.vsCountdown) this.dom.vsCountdown.textContent = String(count);
+      const timer = setInterval(() => {
+        count--;
+        if (this.dom.vsCountdown) this.dom.vsCountdown.textContent = String(count);
+        if (count <= 0) {
+          clearInterval(timer);
+          if (this.dom.modalMatchmaking) this.dom.modalMatchmaking.classList.add('hidden');
+        }
+      }, 400);
+    }
   }
 
   joinRoomByCode(code) {
@@ -923,12 +969,18 @@ class BingoApp {
 
       case 'room_created':
       case 'room_joined': {
-        if (this.dom.modalMatchmaking) {
-          this.dom.modalMatchmaking.classList.add('hidden');
-        }
         this.currentRoom = msg.room;
         window.history.pushState({}, '', `/r/${msg.code}`);
         this._renderLobby(msg.room);
+
+        // If matchmaking with 2 players, present VS clash
+        const other = msg.room.players.find(p => p.id !== this.playerId);
+        if (other && this.dom.modalMatchmaking && !this.dom.modalMatchmaking.classList.contains('hidden')) {
+          this._showMatchFoundVS(other.name);
+        } else if (!this._quickMatchBotTimeout && this.dom.modalMatchmaking) {
+          this.dom.modalMatchmaking.classList.add('hidden');
+        }
+
         this._showScreen('lobby');
         break;
       }
@@ -1100,6 +1152,10 @@ class BingoApp {
 
     if (this.status === 'lobby') {
       this._renderLobby(room);
+      const other = room.players.find(p => p.id !== this.playerId);
+      if (other && this.dom.modalMatchmaking && !this.dom.modalMatchmaking.classList.contains('hidden') && this.dom.matchmakingSearchState?.style.display !== 'none') {
+        this._showMatchFoundVS(other.name);
+      }
     } else if (this.status === 'arranging') {
       const other = room.players.find(p => p.id !== this.playerId);
       if (other && other.isBoardLocked && this.dom.friendArrangeBadge) {

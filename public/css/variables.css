@@ -1,0 +1,90 @@
+/**
+ * public/css/variables.css
+ * Master Color Tokens & Design System
+ * Inspired by Subway Surfers (vibrant arcade) & BGMI (tactile game lobby)
+ */
+
+:root {
+  /* Master Palette Tokens */
+  --primary-blue: #1769E0;
+  --primary-blue-dark: #123B78;
+  --primary-blue-light: #EBF2FD;
+  --primary-blue-border: #0D52B8;
+
+  --accent-orange: #FF8A24;
+  --accent-orange-dark: #E06F12;
+  --accent-orange-light: #FFF4EB;
+
+  --gold-yellow: #FFD447;
+  --gold-yellow-dark: #E6B922;
+  --gold-yellow-light: #FFF9E6;
+
+  --coral-red: #FF5555;
+  --coral-red-dark: #D93B3B;
+  --coral-red-light: #FFEBEB;
+
+  --mint-green: #46D6A0;
+  --mint-green-dark: #2EB582;
+  --mint-green-light: #EDFAF5;
+
+  --sky-blue: #55C7F2;
+  --sky-blue-dark: #2BAEDA;
+  --sky-blue-light: #EBF8FD;
+
+  /* Neutrals & Surfaces */
+  --dark-bg: #111827;
+  --light-bg: #F5F7FC;
+  --bg-subtle: #F0F3F9;
+  --card-white: #FFFFFF;
+  --card-border: #E2E8F0;
+  --text-dark: #111827;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+
+  /* Line Cutting Pen Colors */
+  --pen-red: #E63946;
+  --pen-red-dark: #BA181B;
+
+  /* Tactile Arcade Gaming 3D Depth Shadows (Subway Surfers button feel) */
+  --shadow-btn-primary: 0 5px 0 #0D52B8, 0 8px 14px rgba(23, 105, 224, 0.35);
+  --shadow-btn-primary-active: 0 1px 0 #0D52B8, 0 2px 4px rgba(23, 105, 224, 0.35);
+
+  --shadow-btn-gold: 0 5px 0 #D49D0C, 0 8px 14px rgba(255, 212, 71, 0.45);
+  --shadow-btn-gold-active: 0 1px 0 #D49D0C, 0 2px 4px rgba(255, 212, 71, 0.45);
+
+  --shadow-btn-orange: 0 5px 0 #D66E11, 0 8px 14px rgba(255, 138, 36, 0.4);
+  --shadow-btn-orange-active: 0 1px 0 #D66E11, 0 2px 4px rgba(255, 138, 36, 0.4);
+
+  --shadow-btn-mint: 0 5px 0 #289F72, 0 8px 14px rgba(70, 214, 160, 0.35);
+  --shadow-btn-mint-active: 0 1px 0 #289F72, 0 2px 4px rgba(70, 214, 160, 0.35);
+
+  --shadow-btn-danger: 0 5px 0 #BA181B, 0 8px 14px rgba(255, 85, 85, 0.35);
+  --shadow-btn-danger-active: 0 1px 0 #BA181B, 0 2px 4px rgba(255, 85, 85, 0.35);
+
+  --shadow-btn-secondary: 0 4px 0 #CBD5E1, 0 6px 12px rgba(0, 0, 0, 0.05);
+  --shadow-btn-secondary-active: 0 1px 0 #CBD5E1, 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  --shadow-card: 0 4px 12px rgba(18, 59, 120, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card-elevated: 0 12px 28px rgba(18, 59, 120, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-tile: 0 5px 0 #CBD5E1, 0 6px 10px rgba(0, 0, 0, 0.06);
+  --shadow-tile-active: 0 1px 0 #CBD5E1, 0 2px 4px rgba(0, 0, 0, 0.06);
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  /* Typography */
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  --font-hand: 'Kalam', cursive;
+
+  /* Safe Area Insets */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}

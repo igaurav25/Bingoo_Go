@@ -72,6 +72,23 @@
 
     <!-- ==================== 1. HOME SCREEN ==================== -->
     <section id="screen-home" class="screen-view">
+      <!-- BGMI-Inspired Player Status & XP Bar -->
+      <div class="lobby-player-bar" id="lobby-player-bar">
+        <div class="lobby-avatar-wrap">
+          <div class="lobby-avatar-chip" id="lobby-avatar-chip">🦊</div>
+          <div class="lobby-level-badge" id="lobby-level-badge">Lv. 12</div>
+        </div>
+        <div class="lobby-player-info">
+          <div class="lobby-player-header">
+            <span class="lobby-player-name" id="lobby-player-name">Player</span>
+            <span class="lobby-rank-tier">Diamond III</span>
+          </div>
+          <div class="lobby-xp-track" title="XP Progress: 720 / 1000 XP">
+            <div class="lobby-xp-fill" id="lobby-xp-fill" style="width: 72%;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Hero Banner -->
       <div class="home-hero-banner">
         <div class="hero-content">
@@ -552,13 +569,30 @@
 
   <!-- ==================== MODALS ==================== -->
 
-  <!-- 1. Quick Matchmaking Radar Modal -->
+  <!-- 1. Quick Matchmaking Radar & VS Modal -->
   <div id="modal-matchmaking" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-card matchmaking-radar-box">
+    <div class="modal-card matchmaking-radar-box" id="matchmaking-search-state">
       <div class="radar-circle">⚡</div>
       <h3 style="font-family:var(--font-display); font-size:1.35rem; font-weight:800;">Finding Opponent...</h3>
       <p style="font-size:0.85rem; color:var(--text-secondary);">Connecting to players worldwide on 1v1 quick match.</p>
       <button class="btn-tactile btn-secondary modal-close" data-close="modal-matchmaking" style="width:100%;">Cancel</button>
+    </div>
+
+    <div class="modal-card matchmaking-radar-box" id="matchmaking-found-state" style="display:none;">
+      <div class="match-found-banner">MATCH FOUND!</div>
+      <div class="vs-presentation-card">
+        <div class="vs-player-col">
+          <div class="vs-player-avatar-box" id="vs-p1-avatar">🦊</div>
+          <div class="vs-player-name" id="vs-p1-name">You</div>
+        </div>
+        <div class="vs-badge-clash">VS</div>
+        <div class="vs-player-col">
+          <div class="vs-player-avatar-box" id="vs-p2-avatar">🐻</div>
+          <div class="vs-player-name" id="vs-p2-name">Alex_Pro</div>
+        </div>
+      </div>
+      <div class="match-countdown-number" id="vs-countdown">3</div>
+      <p style="font-size:0.8rem; color:var(--text-secondary); font-weight:700;">Entering arena...</p>
     </div>
   </div>
 

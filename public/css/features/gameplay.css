@@ -1,0 +1,381 @@
+/**
+ * public/css/features/gameplay.css
+ * Live Gameplay Screen (STRICT NO-SCROLL RULE)
+ */
+
+/* Strict No-Scroll Rule during Active Gameplay */
+.app-container.gameplay-active {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden !important;
+  padding-bottom: calc(var(--safe-bottom) + 8px);
+  padding-top: calc(var(--safe-top) + 8px);
+  justify-content: space-between;
+}
+
+.gameplay-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(4px, 1.5vh, 10px);
+  overflow: hidden !important;
+  width: 100%;
+}
+
+/* 1. TOP MATCH HEADER */
+.gameplay-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+}
+
+.opponent-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.opp-avatar-small {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1.5px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.opp-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.opp-name {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.opp-status {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint-green);
+  display: inline-block;
+  box-shadow: 0 0 5px rgba(70, 214, 160, 0.6);
+}
+
+.conn-dot.disconnected {
+  background: var(--coral-red);
+  box-shadow: 0 0 5px rgba(255, 85, 85, 0.6);
+}
+
+/* Opponent Mini BINGO progress */
+.opp-bingo-mini {
+  display: flex;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.opp-mini-letter {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-subtle);
+  border: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: var(--text-secondary);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.opp-mini-letter.struck {
+  background: var(--coral-red);
+  color: #FFFFFF;
+  border-color: var(--coral-red-dark);
+  box-shadow: 0 2px 5px rgba(255, 85, 85, 0.4);
+}
+
+/* 2. TURN STATUS & TIMER STRIP */
+.turn-status-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.turn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.turn-badge.my-turn {
+  background: var(--mint-green-light);
+  color: #065F46;
+  border: 1.5px solid #A7F3D0;
+}
+
+.turn-badge.friend-turn {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--card-border);
+}
+
+.timer-clock {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--text-dark);
+  padding: 4px 10px;
+  background: #FFFFFF;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--card-border);
+}
+
+/* 3. BINGO LETTERS ROW */
+.bingo-word-row {
+  display: flex;
+  justify-content: center;
+  gap: clamp(6px, 2vw, 12px);
+  width: 100%;
+}
+
+.bingo-letter-tile {
+  width: clamp(42px, 11vw, 56px);
+  height: clamp(46px, 12vw, 60px);
+  background: #FFFFFF;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--shadow-tile);
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+  font-weight: 900;
+  color: var(--text-dark);
+  user-select: none;
+}
+
+.bingo-letter-tile.struck {
+  animation: letter-pop 0.3s ease-out;
+}
+
+/* 10% Overshoot Red Pen Slash on Struck Letter */
+.letter-strike-slash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 5px;
+  background: var(--pen-red);
+  transform: translate(-50%, -50%) rotate(-25deg);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  box-shadow: 0 1px 4px rgba(230, 57, 70, 0.4);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.bingo-letter-tile.struck .letter-strike-slash {
+  opacity: 1;
+}
+
+/* 4. MAIN 5x5 BOARD GAME GRID WITH CONTINUOUS SVG CUT OVERLAY */
+.gameplay-layout .board-game-container {
+  width: min(92vw, calc(100dvh - 300px), 380px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+/* Marked number cell style: NON-STRIKE INK CIRCLE / TINT (P0 Rule 4) */
+.number-tile.marked {
+  background: #EBF3FE;
+  border-color: #A3C5F7;
+  color: var(--primary-blue-dark);
+  box-shadow: inset 0 2px 4px rgba(23, 105, 224, 0.1);
+}
+
+.cell-ink-stamp {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 2.5px solid var(--primary-blue);
+  background: rgba(23, 105, 224, 0.12);
+  pointer-events: none;
+  display: none;
+}
+
+.number-tile.marked .cell-ink-stamp {
+  display: block;
+}
+
+/* Continuous Slanted Red Pen Stroke Overlay */
+.svg-strike-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.bingo-pen-stroke {
+  fill: none;
+  stroke: var(--pen-red);
+  stroke-width: 9;
+  stroke-linecap: round;
+  filter: drop-shadow(0 2px 4px rgba(186, 24, 27, 0.4));
+}
+
+/* 5. CENTRAL BINGO CLAIM BUTTON */
+.bingo-claim-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.bingo-claim-btn {
+  width: 100%;
+  max-width: 320px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.bingo-claim-btn.locked {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  border: 1.5px solid var(--card-border);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.bingo-claim-btn.active {
+  background: linear-gradient(135deg, #FFE177 0%, var(--gold-yellow) 100%);
+  color: #5D4300;
+  box-shadow: 0 6px 0 #D49D0C, 0 10px 24px rgba(255, 212, 71, 0.55);
+  animation: pulse-gold 2s infinite;
+  cursor: pointer;
+}
+
+.bingo-claim-btn.active:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #D49D0C, 0 4px 10px rgba(255, 212, 71, 0.4);
+}
+
+.bingo-pips-row {
+  display: flex;
+  gap: 5px;
+}
+
+.bingo-pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.bingo-claim-btn.active .bingo-pip.active {
+  background: #5D4300;
+  box-shadow: 0 0 6px rgba(93, 67, 0, 0.6);
+}
+
+/* 6. BOTTOM TRAY: RECENT CALLS CHIPS + REACTION EMOTES */
+.gameplay-bottom-tray {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.recent-calls-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.call-chip {
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-blue-light);
+  color: var(--primary-blue);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+  border: 1px solid rgba(23, 105, 224, 0.2);
+}
+
+.reaction-emotes-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.emote-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.emote-btn:active {
+  transform: scale(1.2);
+}

@@ -1,0 +1,133 @@
+/**
+ * public/css/features/tournaments.css
+ * Knockout Bracket & League Table Styling
+ */
+
+.tourn-tabs-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tourn-tab {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.tourn-tab.active {
+  background: var(--primary-blue);
+  color: #FFFFFF;
+  border-color: var(--primary-blue-border);
+  box-shadow: var(--shadow-btn-primary);
+}
+
+/* Knockout Bracket Tree */
+.bracket-rounds-wrapper {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bracket-round-column {
+  min-width: 140px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bracket-round-header {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--primary-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px;
+}
+
+.bracket-match-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.match-player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.match-player-row.winner {
+  color: var(--primary-blue);
+  font-weight: 900;
+}
+
+.match-score {
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-subtle);
+}
+
+/* League Standings Table */
+.league-table-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.league-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+}
+
+.league-table th {
+  background: var(--bg-subtle);
+  padding: 10px 8px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.league-table td {
+  padding: 10px 8px;
+  border-top: 1px solid var(--card-border);
+  color: var(--text-dark);
+}
+
+.league-table tr.top-tier td {
+  background: var(--gold-yellow-light);
+  font-weight: 800;
+}
+
+.league-table tr.user-row td {
+  background: var(--primary-blue-light);
+  font-weight: 800;
+  color: var(--primary-blue-dark);
+}

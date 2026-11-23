@@ -1,0 +1,31 @@
+/**
+ * public/css/components/cards.css
+ * Reusable Card Containers with tactile depth
+ */
+
+.game-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-card.card-elevated {
+  box-shadow: var(--shadow-card-elevated);
+}
+
+/* Interactive Card Touch Feel */
+.game-card.interactive {
+  cursor: pointer;
+}
+
+.game-card.interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-elevated);
+}
+
+.game-card.interactive:active {
+  transform: translateY(1px);
+}

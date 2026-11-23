@@ -1,0 +1,135 @@
+/**
+ * public/css/components/buttons.css
+ * Reusable Tactile Button Design System (Subway Surfers + BGMI arcade buttons)
+ */
+
+.btn-tactile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+  text-decoration: none;
+  user-select: none;
+  text-align: center;
+  border: none;
+  position: relative;
+}
+
+.btn-tactile:hover {
+  filter: brightness(1.04);
+}
+
+.btn-tactile:active {
+  transform: translateY(4px);
+}
+
+/* Primary Button (Royal Cobalt Blue) */
+.btn-primary {
+  background: linear-gradient(180deg, #2A79F2 0%, var(--primary-blue) 100%);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-btn-primary);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.btn-primary:active {
+  box-shadow: var(--shadow-btn-primary-active);
+}
+
+/* Gold CTA Button (Play Now / Claims) */
+.btn-gold, .btn-cta {
+  background: linear-gradient(180deg, #FFE177 0%, var(--gold-yellow) 100%);
+  color: #5D4300;
+  box-shadow: var(--shadow-btn-gold);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.btn-gold:active, .btn-cta:active {
+  box-shadow: var(--shadow-btn-gold-active);
+}
+
+/* Mint Success Button (Ready / Join) */
+.btn-mint, .btn-success {
+  background: linear-gradient(180deg, #64E5B4 0%, var(--mint-green) 100%);
+  color: #064E3B;
+  box-shadow: var(--shadow-btn-mint);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.btn-mint:active, .btn-success:active {
+  box-shadow: var(--shadow-btn-mint-active);
+}
+
+/* Danger / Coral Button */
+.btn-danger {
+  background: linear-gradient(180deg, #FF7B7B 0%, var(--coral-red) 100%);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-btn-danger);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.btn-danger:active {
+  box-shadow: var(--shadow-btn-danger-active);
+}
+
+/* Secondary Button (Clean White Surface) */
+.btn-secondary {
+  background: #FFFFFF;
+  color: var(--text-dark);
+  border: 1.5px solid var(--card-border);
+  box-shadow: var(--shadow-btn-secondary);
+}
+
+.btn-secondary:active {
+  box-shadow: var(--shadow-btn-secondary-active);
+  background: var(--bg-subtle);
+}
+
+/* Disabled State */
+.btn-tactile:disabled, .btn-tactile.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.5);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Compact Button */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Micro Timer Chips */
+.timer-chip {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--card-border);
+  background: #FFFFFF;
+  color: var(--text-dark);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timer-chip:hover {
+  background: var(--bg-subtle);
+}
+
+.timer-chip.active {
+  background: var(--primary-blue);
+  color: #FFFFFF;
+  border-color: var(--primary-blue-border);
+  box-shadow: 0 2px 6px rgba(23, 105, 224, 0.35);
+}

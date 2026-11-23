@@ -1,0 +1,64 @@
+/**
+ * public/css/features/number-arrangement.css
+ * 5x5 Number Board Arrangement UI
+ */
+
+.board-game-container {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.board-game-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 8px;
+  background: #FFFFFF;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.number-tile {
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 4vw, 1.35rem);
+  font-weight: 900;
+  color: var(--text-dark);
+  box-shadow: var(--shadow-tile);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.15s ease;
+  user-select: none;
+}
+
+.number-tile:hover {
+  filter: brightness(1.02);
+}
+
+.number-tile:active {
+  transform: translateY(3px);
+  box-shadow: var(--shadow-tile-active);
+}
+
+/* Selected cell for swapping in arrange mode */
+.number-tile.selected {
+  background: var(--primary-blue-light);
+  border: 2px solid var(--primary-blue);
+  color: var(--primary-blue);
+  transform: scale(1.04);
+  box-shadow: 0 0 14px rgba(23, 105, 224, 0.4);
+  z-index: 5;
+}

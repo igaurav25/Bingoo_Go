@@ -1,0 +1,261 @@
+/**
+ * public/css/features/home.css
+ * Home Lobby Screen (Subway Surfers vitality + BGMI player status)
+ */
+
+/* Player Status & XP Bar (BGMI Lobby Inspiration) */
+.lobby-player-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 4px;
+}
+
+.lobby-avatar-wrap {
+  position: relative;
+}
+
+.lobby-avatar-chip {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 2px solid var(--primary-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+
+.lobby-level-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--accent-orange);
+  color: #FFFFFF;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.lobby-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lobby-player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.lobby-player-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lobby-rank-tier {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--primary-blue);
+  background: var(--primary-blue-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+/* XP Progress Bar */
+.lobby-xp-track {
+  width: 100%;
+  height: 7px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+
+.lobby-xp-fill {
+  height: 100%;
+  width: 68%;
+  background: linear-gradient(90deg, var(--mint-green), #10B981);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 8px rgba(70, 214, 160, 0.5);
+}
+
+/* Hero Banner (Subway Surfers Vibe) */
+.home-hero-banner {
+  background: linear-gradient(135deg, #1769E0 0%, #123B78 100%);
+  border-radius: var(--radius-xl);
+  padding: 22px 18px;
+  color: #FFFFFF;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(23, 105, 224, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.home-hero-banner::after {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(255, 212, 71, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.home-hero-banner .hero-subtitle {
+  color: var(--gold-yellow);
+}
+
+.home-hero-banner .hero-title {
+  color: #FFFFFF;
+}
+
+.hero-tiles-row {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 16px;
+  justify-content: center;
+}
+
+.hero-tile {
+  width: 44px;
+  height: 48px;
+  background: #FFFFFF;
+  color: var(--text-dark);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-tile);
+  border: 2px solid var(--card-border);
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.hero-tile.active {
+  background: linear-gradient(135deg, var(--accent-orange), var(--coral-red));
+  color: #FFFFFF;
+  border-color: #FFFFFF;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 14px rgba(255, 85, 85, 0.35);
+}
+
+/* 4 Game Modes Grid (Chunky Arcade Cards) */
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.mode-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 14px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mode-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-elevated);
+}
+
+.mode-card:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mode-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.mode-card.quick-match .mode-icon-circle {
+  background: linear-gradient(135deg, #FFE177, var(--gold-yellow));
+  color: #6B4D00;
+}
+
+.mode-card.create-room .mode-icon-circle {
+  background: linear-gradient(135deg, #74EBBE, var(--mint-green));
+  color: #064E3B;
+}
+
+.mode-card.join-room .mode-icon-circle {
+  background: linear-gradient(135deg, #81D8F8, var(--sky-blue));
+  color: #0C4A6E;
+}
+
+.mode-card.tournament-mode .mode-icon-circle {
+  background: linear-gradient(135deg, #FFA95E, var(--accent-orange));
+  color: #7C2D12;
+}
+
+/* Daily Reward Card */
+.reward-quest-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #FFF8E6 0%, #FFF1CC 100%);
+  border: 1.5px solid #FFE494;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 12px rgba(255, 212, 71, 0.15);
+}
+
+.reward-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reward-gift-box {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.reward-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #6B4D00;
+}
+
+.reward-sub {
+  font-size: 0.78rem;
+  color: #8C6B10;
+  font-weight: 600;
+}
