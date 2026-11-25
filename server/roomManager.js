@@ -1,6 +1,6 @@
 /**
  * server/roomManager.js
- * 
+ *
  * Part 2 Multi-device Room Manager.
  * - 5-character vowel-free, look-alike-free alphabet (2-9, consonants except L)
  * - 2 players per room (maxPlayers = 2)
@@ -17,7 +17,6 @@ import { Match } from './gameState.js';
 import { BingoBot } from './botPlayer.js';
 
 // Alphabet: digits 2-9 and consonants except L (no 0, 1, A, E, I, O, U, L)
-// Total 28 characters: 23456789BCDFGHJKMNPQRSTVWXYZ
 export const ROOM_ALPHABET = '23456789BCDFGHJKMNPQRSTVWXYZ';
 export const ROOM_CODE_LENGTH = 5;
 export const MAX_PLAYERS = 2;
@@ -27,8 +26,6 @@ export const IDLE_ROOM_EXPIRY_MS = 30 * 60 * 1000;
 
 /**
  * Generates a random 5-character room code from the alphabet.
- * @param {(code: string) => boolean} isCodeTaken
- * @returns {string}
  */
 export function generateRoomCode(isCodeTaken = () => false) {
   let code = '';
@@ -41,8 +38,6 @@ export function generateRoomCode(isCodeTaken = () => false) {
 
 /**
  * Sanitizes and validates a room code.
- * @param {string} input
- * @returns {string}
  */
 export function normalizeRoomCode(input) {
   if (!input || typeof input !== 'string') return '';
@@ -50,14 +45,7 @@ export function normalizeRoomCode(input) {
 }
 
 export class DeviceRoom {
-  /**
-   * @param {string} code
-   * @param {string} hostPlayerId
-   * @param {string} hostSessionToken
-   * @param {string} hostName
-   * @param {string} hostAvatar
-   */
-  constructor(code, hostPlayerId, hostSessionToken, hostName, hostAvatar) {
+  constructor(code, hostPlayerId, hostSessionToken, hostName, hostAvatar, settings = {}) {
     this.code = code;
     this.hostPlayerId = hostPlayerId;
     this.status = 'lobby'; // 'lobby' | 'arranging' | 'playing' | 'finished'
@@ -66,27 +54,30 @@ export class DeviceRoom {
 
     // Settings
     this.settings = {
-      turnTimerSeconds: 0, // 0 = Off, 20, 30, 45
-      seriesTargetWins: 1  // 1 = single match, 2 = Best-of-3, 3 = Best-of-5
+      turnTimerSeconds: Number(settings.turnTimerSeconds) || 0, // 0 = Off, 20, 30, 45
+      seriesTargetWins: Number(settings.seriesTargetWins) || 1, // 1 = single match, 2 = Best-of-3, 3 = Best-of-5
+      disconnectRule: settings.disconnectRule || 'PAUSE_60S',
+      timeoutRule: settings.timeoutRule || 'AUTO_PICK'
     };
+    this.allowedPlayerIds = Array.isArray(settings.allowedPlayerIds) ? settings.allowedPlayerIds : null;
 
     // Series scores: playerId -> wins
     this.scores = {
       [hostPlayerId]: 0
     };
 
-    // Players: array of player records
+    // Players array
     this.players = [
       this._createPlayerRecord(hostPlayerId, hostSessionToken, hostName, hostAvatar, true)
     ];
 
-    // Rematch requests: Set of playerIds
+    // Rematch & match state
     this.rematchRequests = new Set();
     this.lastStartingPlayerId = hostPlayerId;
-
-    // Active gameplay match
     this.match = null;
     this.bot = null;
+    this.victoryProcessed = false;
+    this.winnerId = null;
 
     // Disconnect handling
     this.disconnectTimer = null;
@@ -97,6 +88,37 @@ export class DeviceRoom {
     // Turn timer
     this.turnTimerInterval = null;
     this.turnDeadline = null;
+
+    // Event log & idempotency
+    this.eventSeq = 0;
+    this.eventLog = [];
+    this.processedCmds = new Set();
+  }
+
+  appendEvent(type, payload = {}) {
+    this.eventSeq++;
+    const event = {
+      seq: this.eventSeq,
+      type,
+      payload,
+      timestamp: Date.now()
+    };
+    this.eventLog.push(event);
+    if (this.eventLog.length > 500) {
+      this.eventLog.shift();
+    }
+    return event;
+  }
+
+  isCmdDuplicate(cmdId) {
+    if (!cmdId) return false;
+    if (this.processedCmds.has(cmdId)) return true;
+    this.processedCmds.add(cmdId);
+    if (this.processedCmds.size > 1000) {
+      const first = this.processedCmds.values().next().value;
+      this.processedCmds.delete(first);
+    }
+    return false;
   }
 
   _createPlayerRecord(id, sessionToken, name, avatar, isHost = false) {
@@ -127,32 +149,68 @@ export class DeviceRoom {
   }
 
   /**
+   * Direct player/bot insertion helper used by matchmaking, challenges & tournaments.
+   */
+  addPlayer(playerId, sessionToken, name, avatar, isBot = false, ws = null) {
+    this.touch();
+    const existing = this.findPlayerById(playerId);
+    if (existing) {
+      if (ws) existing.ws = ws;
+      existing.isConnected = true;
+      existing.sessionToken = sessionToken || existing.sessionToken;
+      return existing;
+    }
+    if (this.players.length >= MAX_PLAYERS) return null;
+
+    const record = this._createPlayerRecord(playerId, sessionToken, name, avatar, false);
+    record.ws = ws;
+    record.isBot = Boolean(isBot);
+    if (isBot) {
+      record.isReady = true;
+      const botInstance = new BingoBot(playerId, record.name);
+      record.botInstance = botInstance;
+      this.bot = botInstance;
+    }
+    this.players.push(record);
+    this.scores[playerId] = this.scores[playerId] || 0;
+    this.pauseCounts[playerId] = this.pauseCounts[playerId] || 0;
+    return record;
+  }
+
+  /**
    * Adds or reconnects a player to the room.
-   * @param {string} playerId
-   * @param {string} sessionToken
-   * @param {string} name
-   * @param {string} avatar
-   * @param {WebSocket} ws
-   * @returns {{ success: boolean, error?: string, isReconnect?: boolean, oldWs?: WebSocket }}
    */
   join(playerId, sessionToken, name, avatar, ws) {
     this.touch();
 
-    // 1. Check if player with this sessionToken already exists in this room (reconnection or second tab)
+    // Reject outsiders on restricted tournament match rooms
+    if (this.tournamentId && Array.isArray(this.allowedPlayerIds) && this.allowedPlayerIds.length > 0) {
+      if (!this.allowedPlayerIds.includes(playerId)) {
+        return {
+          success: false,
+          code: 'UNAUTHORIZED_PLAYER',
+          error: 'Only the two assigned match participants may enter this tournament match room.'
+        };
+      }
+    }
+
+    // 1. Check reconnection by sessionToken OR matching seat playerId (for tournament pre-reserved seats)
     const existingByToken = this.findPlayerBySessionToken(sessionToken);
-    if (existingByToken) {
-      const oldWs = existingByToken.ws;
-      existingByToken.ws = ws;
-      existingByToken.isConnected = true;
-      existingByToken.lastSeenAt = Date.now();
+    const existingById = !existingByToken ? this.findPlayerById(playerId) : null;
+    const existingSeat = existingByToken || (existingById && (this.tournamentId || !existingById.isConnected || existingById.sessionToken === `tourn-tok-${playerId}`) ? existingById : null);
 
-      // If they had changed nickname/avatar, update
-      if (name) existingByToken.name = name.slice(0, 16);
-      if (avatar) existingByToken.avatar = avatar;
+    if (existingSeat) {
+      const oldWs = existingSeat.ws;
+      existingSeat.ws = ws;
+      existingSeat.isConnected = true;
+      existingSeat.lastSeenAt = Date.now();
+      if (sessionToken) existingSeat.sessionToken = sessionToken;
 
-      // Handle reconnect during pause
+      if (name) existingSeat.name = name.slice(0, 16);
+      if (avatar) existingSeat.avatar = avatar;
+
       let wasPaused = false;
-      if (this.disconnectedPlayerId === existingByToken.id) {
+      if (this.disconnectedPlayerId === existingSeat.id) {
         this._cancelDisconnectGrace();
         wasPaused = true;
       }
@@ -160,19 +218,34 @@ export class DeviceRoom {
       return {
         success: true,
         isReconnect: true,
-        player: existingByToken,
+        player: existingSeat,
         oldWs,
         wasPaused
       };
     }
 
-    // 2. Room capacity check
-    if (this.players.length >= MAX_PLAYERS) {
-      return { success: false, error: 'Room is full (2/2 players).' };
+    // 2. Reject new joins to rooms already in progress or finished
+    if (this.status === 'playing' || this.status === 'arranging') {
+      return {
+        success: false,
+        code: 'MATCH_ALREADY_STARTED',
+        error: 'Match has already started in this room.'
+      };
+    }
+    if (this.status === 'finished') {
+      return {
+        success: false,
+        code: 'MATCH_FINISHED',
+        error: 'This match has already finished.'
+      };
     }
 
-    // 3. New player joining
-    // Ensure name doesn't collide with existing player
+    // 3. Room capacity check
+    if (this.players.length >= MAX_PLAYERS) {
+      return { success: false, code: 'ROOM_FULL', error: 'Room is full (2/2 players).' };
+    }
+
+    // 4. New player joining
     let finalName = (name || 'Guest').slice(0, 16);
     if (this.players.some(p => p.name.toLowerCase() === finalName.toLowerCase())) {
       finalName = `${finalName} #2`;
@@ -193,7 +266,6 @@ export class DeviceRoom {
 
   /**
    * Adds an AI Bot to practice against.
-   * @returns {{ success: boolean, bot?: BingoBot, error?: string }}
    */
   addBot() {
     this.touch();
@@ -207,25 +279,12 @@ export class DeviceRoom {
     const name = botNames[Math.floor(Math.random() * botNames.length)];
     const avatar = botAvatars[Math.floor(Math.random() * botAvatars.length)];
 
-    const botPlayer = this._createPlayerRecord(botId, botSession, `${name} (Bot)`, avatar, false);
-    botPlayer.isReady = true;
-    botPlayer.isBot = true;
-
-    this.bot = new BingoBot(botId, botPlayer.name);
-    botPlayer.botInstance = this.bot;
-
-    this.players.push(botPlayer);
-    this.scores[botId] = 0;
-    this.pauseCounts[botId] = 0;
-
-    return { success: true, bot: this.bot };
+    const botPlayer = this.addPlayer(botId, botSession, `${name} (Bot)`, avatar, true, null);
+    return { success: true, bot: botPlayer.botInstance };
   }
 
   /**
    * Handles player disconnection (socket close / drop).
-   * @param {string} playerId
-   * @param {(winnerId: string, reason: string) => void} onForfeit
-   * @returns {{ shouldPause: boolean, graceDeadline?: number }}
    */
   handleDisconnect(playerId, onForfeit) {
     this.touch();
@@ -236,16 +295,20 @@ export class DeviceRoom {
     player.ws = null;
     player.lastSeenAt = Date.now();
 
-    // If still in lobby, no need to pause match
     if (this.status === 'lobby') {
       return { shouldPause: false };
     }
 
-    // In active match ('arranging' or 'playing'): pause match up to 60s
     if (this.status === 'arranging' || this.status === 'playing') {
+      if (this.settings?.disconnectRule === 'FORFEIT') {
+        const otherPlayer = this.players.find(p => p.id !== playerId);
+        if (otherPlayer && onForfeit) {
+          onForfeit(otherPlayer.id, 'Opponent disconnected (tournament FORFEIT rule).');
+        }
+        return { shouldPause: false };
+      }
       const currentPauses = this.pauseCounts[playerId] || 0;
       if (currentPauses >= 2) {
-        // Exceeded max pauses -> forfeit immediately
         const otherPlayer = this.players.find(p => p.id !== playerId);
         if (otherPlayer && onForfeit) {
           onForfeit(otherPlayer.id, 'Opponent exceeded maximum disconnect pauses (forfeit).');
@@ -257,7 +320,6 @@ export class DeviceRoom {
       this.disconnectedPlayerId = playerId;
       this.disconnectGraceDeadline = Date.now() + DISCONNECT_GRACE_PERIOD_MS;
 
-      // Start 60-second grace timer
       if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
       this.disconnectTimer = setTimeout(() => {
         if (this.disconnectedPlayerId === playerId) {
@@ -292,7 +354,6 @@ export class DeviceRoom {
 
   /**
    * Removes player from room (explicit leave).
-   * @param {string} playerId
    */
   removePlayer(playerId) {
     this.touch();
@@ -303,7 +364,6 @@ export class DeviceRoom {
       this.players.splice(idx, 1);
       delete this.scores[playerId];
 
-      // If host left, assign host to the other player
       if (this.hostPlayerId === playerId && this.players.length > 0) {
         this.hostPlayerId = this.players[0].id;
         this.players[0].isHost = true;
@@ -313,15 +373,12 @@ export class DeviceRoom {
 
   /**
    * Toggles ready state in lobby.
-   * @param {string} playerId
-   * @param {boolean} [ready]
-   * @returns {{ allReady: boolean }}
    */
   setReady(playerId, ready = null) {
     this.touch();
     const p = this.findPlayerById(playerId);
     if (p) {
-      p.isReady = ready !== null ? ready : !p.isReady;
+      p.isReady = ready !== null ? Boolean(ready) : !p.isReady;
     }
     const allReady = this.players.length === MAX_PLAYERS && this.players.every(pl => pl.isReady);
     return { allReady };
@@ -332,10 +389,15 @@ export class DeviceRoom {
    */
   startArranging() {
     this.touch();
+    if (this.players.length < MAX_PLAYERS) {
+      return { error: 'Need 2 players in room before starting.' };
+    }
+
     this.status = 'arranging';
+    this.victoryProcessed = false;
+    this.winnerId = null;
     this.rematchRequests.clear();
 
-    // Reset boards
     this.players.forEach(p => {
       p.isBoardLocked = false;
       if (p.isBot && p.botInstance) {
@@ -343,22 +405,24 @@ export class DeviceRoom {
       }
     });
 
-    // Create new Match instance
     const [p1, p2] = this.players;
     const matchId = `match-${this.code}-${Date.now().toString(36)}`;
+    this.matchId = matchId;
 
-    // Alternate starting player for rematches
     const startingPlayerId = this.lastStartingPlayerId === p1.id ? p2.id : p1.id;
     this.lastStartingPlayerId = startingPlayerId;
 
     this.match = new Match(matchId, p1.id, p2.id, {
       claimRateLimitMs: 400
     });
+    this.match.players[p1.id].name = p1.name;
+    this.match.players[p2.id].name = p2.name;
     this.match.currentTurnPlayerId = startingPlayerId;
 
-    // If player 2 is bot, auto-lock arrangement
-    if (p2.isBot && p2.botInstance) {
-      this.match.setPlayerArrangement(p2.id, p2.botInstance.grid);
+    for (const pl of this.players) {
+      if (pl.isBot && pl.botInstance) {
+        this.match.setPlayerArrangement(pl.id, pl.botInstance.grid);
+      }
     }
 
     return { matchId, startingPlayerId };
@@ -366,9 +430,6 @@ export class DeviceRoom {
 
   /**
    * Sets board arrangement and locks it.
-   * If both players locked, transitions status to 'playing'.
-   * @param {string} playerId
-   * @param {number[]} grid
    */
   lockBoard(playerId, grid) {
     this.touch();
@@ -384,7 +445,6 @@ export class DeviceRoom {
 
     p.isBoardLocked = true;
 
-    // Check if both locked
     const bothLocked = this.players.every(pl => pl.isBoardLocked);
     let matchStarted = false;
     if (bothLocked && this.status === 'arranging') {
@@ -420,26 +480,20 @@ export class DeviceRoom {
   }
 
   /**
-   * Request a rematch. When both agree, restarts into 'arranging'.
-   * @param {string} playerId
-   * @returns {{ rematchReady: boolean }}
+   * Request a rematch.
    */
   requestRematch(playerId) {
     this.touch();
     this.rematchRequests.add(playerId);
-    // If bot is playing, bot auto-agrees
     if (this.players.some(p => p.isBot)) {
       this.players.filter(p => p.isBot).forEach(b => this.rematchRequests.add(b.id));
     }
-    const rematchReady = this.players.every(p => this.rematchRequests.has(p.id));
+    const rematchReady = this.players.length >= MAX_PLAYERS && this.players.every(p => this.rematchRequests.has(p.id));
     return { rematchReady };
   }
 
   /**
-   * Generates public snapshot of the room.
-   * NEVER sends sessionTokens or opponent grid arrangements!
-   * @param {string} [forPlayerId]
-   * @returns {object}
+   * Generates public snapshot of the room (never leaks sessionToken or opponent grid).
    */
   getSnapshot(forPlayerId) {
     const isPaused = this.disconnectedPlayerId !== null;
@@ -450,6 +504,10 @@ export class DeviceRoom {
 
     return {
       code: this.code,
+      matchId: this.matchId || `match-${this.code}`,
+      tournamentId: this.tournamentId || null,
+      tournamentMatchId: this.tournamentMatchId || null,
+      eventSeq: this.eventSeq,
       hostPlayerId: this.hostPlayerId,
       status: this.status,
       isPaused,
@@ -480,12 +538,9 @@ export class DeviceRoomManager {
   constructor() {
     /** @type {Map<string, DeviceRoom>} */
     this.rooms = new Map();
+    this.createRateLimits = new Map();
+    this.joinRateLimits = new Map();
 
-    // IP Rate limiting
-    this.createRateLimits = new Map(); // ip -> [timestamps]
-    this.joinRateLimits = new Map();   // ip -> [timestamps]
-
-    // Periodic cleanup of empty and idle rooms (unref so process exits cleanly in tests)
     this._cleanupTimer = setInterval(() => this.cleanupExpiredRooms(), 60 * 1000);
     if (this._cleanupTimer.unref) {
       this._cleanupTimer.unref();
@@ -504,9 +559,9 @@ export class DeviceRoomManager {
     return true;
   }
 
-  createRoom(hostPlayerId, hostSessionToken, hostName, hostAvatar) {
+  createRoom(hostPlayerId, hostSessionToken, hostName, hostAvatar, settings = {}) {
     const code = generateRoomCode((c) => this.rooms.has(c));
-    const room = new DeviceRoom(code, hostPlayerId, hostSessionToken, hostName, hostAvatar);
+    const room = new DeviceRoom(code, hostPlayerId, hostSessionToken, hostName, hostAvatar, settings);
     this.rooms.set(code, room);
     return room;
   }
@@ -520,12 +575,10 @@ export class DeviceRoomManager {
     const now = Date.now();
     for (const [code, room] of this.rooms.entries()) {
       const connectedCount = room.players.filter(p => p.isConnected && !p.isBot).length;
-      // Empty room (0 connected human players) expires after 5 min
       if (connectedCount === 0 && (now - room.lastActivityAt > EMPTY_ROOM_EXPIRY_MS)) {
         this.rooms.delete(code);
         continue;
       }
-      // Idle room expires after 30 min
       if (now - room.lastActivityAt > IDLE_ROOM_EXPIRY_MS) {
         this.rooms.delete(code);
       }

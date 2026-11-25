@@ -1,17 +1,12 @@
 /**
  * server/server.js
- * 
- * Part 2 Authoritative Realtime Bingo Server.
- * Supports:
- * - Single-page app routing: / and /r/:code
- * - Redirects for legacy query parameters (?match=... / ?room=...)
- * - Cold-start health check: /health
- * - Anonymous session tokens (no accounts, seat ownership, zero opponent leakage)
- * - 5-character vowel-free room codes (2-9, consonants except L)
- * - Disconnect grace period (60s pause, forfeit on timeout)
- * - Tab conflict resolution (newest tab wins)
- * - Turn timer with server-authoritative deadlines & auto-pick on timeout
- * - Rematch support with alternating first turns
+ *
+ * Authoritative Realtime Multiplayer Bingo Server.
+ * - Serves built React SPA across /, /r/:code, /modes/*, /tournaments/*, /leaderboard, /profile, /game
+ * - Verifies frontend build artifacts on startup before binding port
+ * - Provides honest /health & /api/health/db status (live DB vs offline fallback)
+ * - Runs authoritative WebSocket engine for private rooms, quick matchmaking, bots,
+ *   challenge invites, server-side turn timeout auto-picks, and live tournament rooms
  */
 
 import http from 'node:http';
@@ -22,17 +17,21 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { deviceRooms, normalizeRoomCode } from './roomManager.js';
 import { economy } from './economy.js';
-import { tournamentManager } from './tournamentManager.js';
 import { friendsManager } from './friendsManager.js';
+import { handleApiRequest } from './routes/apiRoutes.js';
+import { checkDatabaseConnection, isDbConnected } from './db/prisma.js';
+import { walletService, matchService, userService, friendService, tournamentService } from './services/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
-const SHARED_DIR = path.join(ROOT_DIR, 'shared');
+const DIST_JS_PATH = path.join(PUBLIC_DIR, 'dist', 'bingo-react.js');
+const DIST_CSS_PATH = path.join(PUBLIC_DIR, 'dist', 'bingo-react.css');
 
 const PORT = process.env.PORT || 3000;
 const MAX_MESSAGE_SIZE = 16 * 1024; // 16 KB
+const QUICK_MATCH_TIMEOUT_MS = 25000;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -46,24 +45,111 @@ const MIME_TYPES = {
   '.webmanifest': 'application/manifest+json'
 };
 
+function getBundleStatus() {
+  try {
+    const jsStat = fs.existsSync(DIST_JS_PATH) ? fs.statSync(DIST_JS_PATH) : null;
+    const cssStat = fs.existsSync(DIST_CSS_PATH) ? fs.statSync(DIST_CSS_PATH) : null;
+    const jsBytes = jsStat?.size || 0;
+    const cssBytes = cssStat?.size || 0;
+    const ready = jsBytes > 1024 && cssBytes > 128;
+    return { ready, jsBytes, cssBytes };
+  } catch {
+    return { ready: false, jsBytes: 0, cssBytes: 0 };
+  }
+}
+
+// Tracked WebSocket clients & Quick Match matchmaking queue
+const socketClients = new Map(); // ws -> { roomCode, playerId, sessionToken, name, avatar, lastReactionAt }
+const quickMatchQueue = []; // { ws, playerId, sessionToken, name, avatar, turnTimerSeconds, seriesTargetWins, queuedAt, timeoutTimer }
+
+function send(ws, type, payload = {}) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type, ...payload }));
+  }
+}
+
+function broadcastGlobal(type, payload = {}) {
+  for (const [clientWs] of socketClients.entries()) {
+    send(clientWs, type, payload);
+  }
+}
+
+tournamentService.setBroadcaster((tournament) => {
+  broadcastGlobal('tournament_updated', { tournament });
+});
+
+function broadcastToRoom(room, type, payload = {}, excludePlayerId = null) {
+  if (!room) return;
+  for (const player of room.players) {
+    if (player.id !== excludePlayerId && player.ws && player.ws.readyState === WebSocket.OPEN) {
+      send(player.ws, type, payload);
+    }
+  }
+}
+
+function syncRoomState(room) {
+  if (!room) return;
+  for (const player of room.players) {
+    if (player.ws && player.ws.readyState === WebSocket.OPEN) {
+      send(player.ws, 'room_state', {
+        room: room.getSnapshot(player.id)
+      });
+    }
+  }
+}
+
+function removeFromQuickMatchQueue(wsOrPlayerId) {
+  for (let i = quickMatchQueue.length - 1; i >= 0; i--) {
+    const entry = quickMatchQueue[i];
+    if (entry.ws === wsOrPlayerId || entry.playerId === wsOrPlayerId) {
+      if (entry.timeoutTimer) clearTimeout(entry.timeoutTimer);
+      quickMatchQueue.splice(i, 1);
+      return entry;
+    }
+  }
+  return null;
+}
+
 // HTTP Server
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
+  try {
+    const handled = await handleApiRequest(req, res);
+    if (handled) return;
+  } catch (err) {
+    console.error('API Error:', err);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Internal Server Error' }));
+    return;
+  }
+
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURI(urlObj.pathname);
 
-  // 1. Health check for cold starts
+  // 1. Honest health check
   if (pathname === '/health') {
+    const bundle = getBundleStatus();
+    const dbOnline = isDbConnected();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      status: 'ok',
+      status: bundle.ready ? 'ok' : 'degraded',
       uptime: process.uptime(),
       roomsCount: deviceRooms.rooms.size,
+      frontendBundle: bundle,
+      database: {
+        connected: dbOnline,
+        status: dbOnline ? 'online' : 'offline_fallback',
+        orm: 'Prisma 6.19.3'
+      },
+      websocket: {
+        activeClients: socketClients.size,
+        quickMatchQueue: quickMatchQueue.length
+      },
       timestamp: Date.now()
     }));
     return;
   }
 
-  // 2. Legacy URL redirect: ?match=XYZ or ?room=XYZ -> /r/:code
+  // 2. Legacy URL redirect
   const legacyMatch = urlObj.searchParams.get('match') || urlObj.searchParams.get('room');
   if (legacyMatch && pathname === '/') {
     const cleanCode = normalizeRoomCode(legacyMatch) || 'B4K8M';
@@ -72,7 +158,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. Single App, One URL Routing: / and /r/:code serve index.html; /demo serves standalone demo
+  // 3. Demo route
   if (pathname === '/demo') {
     const demoPath = path.join(PUBLIC_DIR, 'demo.html');
     res.writeHead(200, {
@@ -83,7 +169,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (pathname === '/' || pathname.startsWith('/r/') || pathname.startsWith('/modes')) {
+  // 4. Single Page App HTML shell for all app routes
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/r/') ||
+    pathname.startsWith('/modes') ||
+    pathname.startsWith('/tournaments') ||
+    pathname === '/leaderboard' ||
+    pathname === '/profile' ||
+    pathname === '/game'
+  ) {
     const indexPath = path.join(PUBLIC_DIR, 'index.html');
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
@@ -93,7 +188,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. Static asset delivery
+  // 5. Static asset delivery
   let filePath = '';
   if (pathname.startsWith('/shared/')) {
     filePath = path.join(ROOT_DIR, pathname);
@@ -109,7 +204,6 @@ const server = http.createServer((req, res) => {
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      // Fallback for SPA routing
       const fallbackIndex = path.join(PUBLIC_DIR, 'index.html');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       fs.createReadStream(fallbackIndex).pipe(res);
@@ -119,9 +213,10 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+    const isMutableAsset = ext === '.html' || pathname.startsWith('/dist/') || pathname === '/sw.js';
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
+      'Cache-Control': isMutableAsset ? 'no-cache, no-store, must-revalidate' : 'public, max-age=3600'
     });
     fs.createReadStream(filePath).pipe(res);
   });
@@ -131,43 +226,7 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({ server, maxPayload: MAX_MESSAGE_SIZE });
 
 /**
- * Socket client tracking: ws -> { roomCode, playerId, sessionToken, lastReactionAt }
- */
-const socketClients = new Map();
-
-function send(ws, type, payload = {}) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type, ...payload }));
-  }
-}
-
-function broadcastToRoom(room, type, payload = {}, excludePlayerId = null) {
-  if (!room) return;
-  for (const player of room.players) {
-    if (player.id !== excludePlayerId && player.ws && player.ws.readyState === WebSocket.OPEN) {
-      send(player.ws, type, payload);
-    }
-  }
-}
-
-/**
- * Dispatches room state update to all connected players in room.
- * @param {DeviceRoom} room
- */
-function syncRoomState(room) {
-  if (!room) return;
-  for (const player of room.players) {
-    if (player.ws && player.ws.readyState === WebSocket.OPEN) {
-      send(player.ws, 'room_state', {
-        room: room.getSnapshot(player.id)
-      });
-    }
-  }
-}
-
-/**
- * Checks and schedules bot turn if applicable.
- * @param {DeviceRoom} room
+ * Checks and schedules AI Bot turn when active in a Practice/Bot room.
  */
 function handleBotTurnIfNeeded(room) {
   if (!room || !room.match || room.status !== 'playing' || room.disconnectedPlayerId) return;
@@ -177,10 +236,9 @@ function handleBotTurnIfNeeded(room) {
 
   if (botPlayer && botPlayer.botInstance) {
     setTimeout(async () => {
-      if (room.status !== 'playing' || room.match.currentTurnPlayerId !== botPlayer.id) return;
+      if (room.status !== 'playing' || !room.match || room.match.currentTurnPlayerId !== botPlayer.id) return;
 
       await room.match.enqueue(() => {
-        // Check if bot can claim BINGO
         const botData = room.match.players[botPlayer.id];
         if (botData && botData.completedLines.length >= 5) {
           const verdict = room.match.claimBingo(botPlayer.id, `claim-bot-${Date.now()}`);
@@ -190,20 +248,22 @@ function handleBotTurnIfNeeded(room) {
           }
         }
 
-        // Pick smart uncalled number
         const number = botPlayer.botInstance.chooseNumber(room.match.calledNumbers);
+        if (number == null) return;
         const callRes = room.match.callNumber(botPlayer.id, number);
 
         if (callRes.success) {
+          room._startTurnTimerIfNeeded();
+
           broadcastToRoom(room, 'number_called', {
             number: callRes.number,
             turnPlayerId: callRes.turnPlayerId,
             nextTurnPlayerId: callRes.nextTurnPlayerId,
             calledNumbers: room.match.calledNumbers,
+            turnDeadline: room.turnDeadline,
             isAutoPicked: false
           });
 
-          // Dispatch lines_completed
           for (const evt of callRes.events) {
             const p = room.findPlayerById(evt.recipientId);
             if (p && p.ws) {
@@ -211,49 +271,171 @@ function handleBotTurnIfNeeded(room) {
             }
           }
 
-          // Restart turn timer if configured
-          room._startTurnTimerIfNeeded();
           syncRoomState(room);
 
-          // If bot reached 5 lines, claim
           if (room.match.players[botPlayer.id].completedLines.length >= 5) {
-            setTimeout(async () => {
-              if (room.status === 'playing') {
+            setTimeout(() => {
+              if (room.status === 'playing' && room.match) {
                 const verdict = room.match.claimBingo(botPlayer.id, `claim-bot-${Date.now()}`);
                 if (verdict.valid) {
                   handleVictory(room, verdict);
                 }
               }
-            }, 500);
+            }, 450);
           } else {
             handleBotTurnIfNeeded(room);
           }
         }
       });
-    }, 1100);
+    }, 950);
   }
 }
 
 /**
- * Handles match victory and awards series points/coins.
- * @param {DeviceRoom} room
- * @param {object} verdict
+ * Authoritative turn-deadline sweeper: automatically picks an uncalled number if a player's timer expires.
+ */
+const turnTimeoutSweeper = setInterval(() => {
+  const now = Date.now();
+  for (const room of deviceRooms.rooms.values()) {
+    if (
+      room.status === 'playing' &&
+      room.match &&
+      !room.disconnectedPlayerId &&
+      room.turnDeadline &&
+      now >= room.turnDeadline
+    ) {
+      const turnPlayerId = room.match.currentTurnPlayerId;
+      room._clearTurnTimer();
+
+      room.match.enqueue(() => {
+        if (room.status !== 'playing' || !room.match || room.match.currentTurnPlayerId !== turnPlayerId) return;
+        if (room.settings?.timeoutRule === 'SKIP_TURN') {
+          const skipRes = room.match.skipTurn(turnPlayerId);
+          if (skipRes.success) {
+            room._startTurnTimerIfNeeded();
+            broadcastToRoom(room, 'turn_skipped', {
+              skippedPlayerId: skipRes.skippedPlayerId,
+              nextTurnPlayerId: skipRes.nextTurnPlayerId,
+              turnDeadline: room.turnDeadline
+            });
+            syncRoomState(room);
+            handleBotTurnIfNeeded(room);
+          }
+          return;
+        }
+        const uncalled = [];
+        for (let n = 1; n <= 25; n++) {
+          if (!room.match.calledNumbersSet.has(n)) uncalled.push(n);
+        }
+        if (uncalled.length === 0) return;
+
+        const pick = uncalled[Math.floor(Math.random() * uncalled.length)];
+        const callRes = room.match.callNumber(turnPlayerId, pick);
+        if (callRes.success) {
+          room._startTurnTimerIfNeeded();
+          broadcastToRoom(room, 'number_called', {
+            number: callRes.number,
+            turnPlayerId: callRes.turnPlayerId,
+            nextTurnPlayerId: callRes.nextTurnPlayerId,
+            calledNumbers: room.match.calledNumbers,
+            turnDeadline: room.turnDeadline,
+            isAutoPicked: true
+          });
+
+          for (const evt of callRes.events) {
+            const p = room.findPlayerById(evt.recipientId);
+            if (p && p.ws) {
+              send(p.ws, evt.event, evt.payload);
+            }
+          }
+
+          syncRoomState(room);
+          handleBotTurnIfNeeded(room);
+        }
+      }).catch(() => {});
+    }
+  }
+}, 1000);
+if (turnTimeoutSweeper.unref) turnTimeoutSweeper.unref();
+
+/**
+ * Atomic idempotent victory resolution + tournament sync + wallet/history persistence.
  */
 function handleVictory(room, verdict) {
+  if (!room || room.victoryProcessed) return;
+
+  room.victoryProcessed = true;
   room.status = 'finished';
+  room.winnerId = verdict.winnerId;
   room._clearTurnTimer();
+
+  const durationSeconds = room.createdAt ? Math.max(1, Math.round((Date.now() - room.createdAt) / 1000)) : 0;
 
   if (verdict.valid && verdict.winnerId) {
     room.scores[verdict.winnerId] = (room.scores[verdict.winnerId] || 0) + 1;
 
-    // Award virtual coins to winner if not bot
-    if (!verdict.winnerId.startsWith('bot-')) {
+    if (!String(verdict.winnerId).startsWith('bot-')) {
       const winner = room.findPlayerById(verdict.winnerId);
       const opponent = room.players.find(p => p.id !== verdict.winnerId);
       if (winner) {
         economy.awardMatchWin(verdict.winnerId, 150, opponent?.name || 'Opponent');
+        walletService.awardCoins(
+          verdict.winnerId,
+          150,
+          'MATCH_WIN',
+          `Match Victory vs ${opponent?.name || 'Opponent'}`
+        ).catch(() => {});
       }
     }
+
+    matchService.completeMatch({
+      matchId: room.matchId || `match-${room.code}`,
+      winnerId: verdict.winnerId,
+      completedLinesCount: verdict.completedLines?.length || 5,
+      isTie: false,
+      durationSeconds,
+      summary: `Won with ${verdict.completedLines?.length || 5} lines: ${verdict.completedLines?.join(', ') || ''}`
+    }).catch(() => {});
+
+    for (const p of room.players) {
+      if (!p.isBot && !String(p.id).startsWith('bot-')) {
+        const opp = room.players.find(o => o.id !== p.id);
+        const matchStatePlayer = room.match?.players?.[p.id];
+        matchService.recordPlayerMatchHistory({
+          userId: p.id,
+          matchId: room.matchId || `match-${room.code}`,
+          opponentName: opp?.name || 'Opponent',
+          mode: room.tournamentId ? 'TOURNAMENT' : 'MULTIPLAYER',
+          result: p.id === verdict.winnerId ? 'WIN' : 'LOSS',
+          linesCompleted: matchStatePlayer?.completedLines?.length || 0,
+          coinsDelta: p.id === verdict.winnerId ? 150 : 0,
+          durationSeconds
+        }).catch(() => {});
+      }
+    }
+
+    // Update tournament fixture automatically when this room belongs to a tournament match
+    if (room.tournamentId && room.tournamentMatchId) {
+      const p1Lines = room.match?.players?.[room.players[0]?.id]?.completedLines?.length || (room.players[0]?.id === verdict.winnerId ? 5 : 2);
+      const p2Lines = room.match?.players?.[room.players[1]?.id]?.completedLines?.length || (room.players[1]?.id === verdict.winnerId ? 5 : 2);
+      tournamentService.recordVerifiedMatchResult(room.tournamentId, {
+        matchId: room.tournamentMatchId,
+        winnerId: verdict.winnerId,
+        scores: [p1Lines, p2Lines]
+      }).then((res) => {
+        if (res.success && res.tournament) {
+          broadcastGlobal('tournament_updated', {
+            tournament: res.tournament,
+            matchId: room.tournamentMatchId,
+            winnerId: verdict.winnerId
+          });
+        }
+      }).catch(() => {});
+    }
+  }
+
+  for (const p of room.players) {
+    if (!p.isBot) friendsManager.setUserStatus(p.id, 'online');
   }
 
   broadcastToRoom(room, 'bingo_result', {
@@ -261,7 +443,8 @@ function handleVictory(room, verdict) {
     valid: verdict.valid,
     winnerId: verdict.winnerId,
     reason: verdict.reason,
-    scores: room.scores
+    scores: room.scores,
+    durationSeconds
   });
 
   syncRoomState(room);
@@ -281,27 +464,187 @@ wss.on('connection', (ws, req) => {
           break;
         }
 
+        case 'identify': {
+          const playerId = payload.playerId || `p-${crypto.randomBytes(3).toString('hex')}`;
+          const name = payload.name || 'Player';
+          const avatar = payload.avatar || '🦊';
+          const sessionToken = payload.sessionToken || crypto.randomBytes(16).toString('hex');
+
+          const existing = socketClients.get(ws) || {};
+          socketClients.set(ws, {
+            ...existing,
+            playerId,
+            sessionToken,
+            name,
+            avatar
+          });
+          friendsManager.registerUser(playerId, name, avatar, ws);
+          send(ws, 'identified', { playerId, name, avatar });
+          break;
+        }
+
+        // --- Quick Match Real Human Matchmaking Queue ---
+        case 'find_quick_match': {
+          const playerId = payload.playerId || `p-${crypto.randomBytes(3).toString('hex')}`;
+          const sessionToken = payload.sessionToken || crypto.randomBytes(16).toString('hex');
+          const name = (payload.name || 'Player').slice(0, 16);
+          const avatar = payload.avatar || '🦊';
+          const turnTimerSeconds = Number(payload.turnTimerSeconds ?? 30);
+          const seriesTargetWins = Number(payload.seriesTargetWins ?? 1);
+
+          friendsManager.registerUser(playerId, name, avatar, ws);
+          removeFromQuickMatchQueue(ws);
+          removeFromQuickMatchQueue(playerId);
+
+          // Look for another active waiting human player
+          let matchedPeer = null;
+          while (quickMatchQueue.length > 0) {
+            const candidate = quickMatchQueue.shift();
+            if (candidate.timeoutTimer) clearTimeout(candidate.timeoutTimer);
+            if (
+              candidate.ws &&
+              candidate.ws.readyState === WebSocket.OPEN &&
+              candidate.playerId !== playerId
+            ) {
+              matchedPeer = candidate;
+              break;
+            }
+          }
+
+          if (matchedPeer) {
+            const room = deviceRooms.createRoom(
+              matchedPeer.playerId,
+              matchedPeer.sessionToken,
+              matchedPeer.name,
+              matchedPeer.avatar,
+              {
+                turnTimerSeconds: matchedPeer.turnTimerSeconds || turnTimerSeconds,
+                seriesTargetWins: matchedPeer.seriesTargetWins || seriesTargetWins
+              }
+            );
+
+            room.players[0].ws = matchedPeer.ws;
+            room.players[0].isReady = true;
+
+            const joinRes = room.join(playerId, sessionToken, name, avatar, ws);
+            if (joinRes.player) {
+              joinRes.player.isReady = true;
+            }
+
+            socketClients.set(matchedPeer.ws, {
+              roomCode: room.code,
+              playerId: matchedPeer.playerId,
+              sessionToken: matchedPeer.sessionToken,
+              name: matchedPeer.name,
+              avatar: matchedPeer.avatar,
+              lastReactionAt: 0
+            });
+            socketClients.set(ws, {
+              roomCode: room.code,
+              playerId: joinRes.player.id,
+              sessionToken: joinRes.player.sessionToken,
+              name: joinRes.player.name,
+              avatar: joinRes.player.avatar,
+              lastReactionAt: 0
+            });
+
+            friendsManager.setUserStatus(matchedPeer.playerId, 'in_game');
+            friendsManager.setUserStatus(joinRes.player.id, 'in_game');
+
+            const { startingPlayerId } = room.startArranging();
+
+            send(matchedPeer.ws, 'quick_match_found', {
+              code: room.code,
+              playerId: matchedPeer.playerId,
+              sessionToken: matchedPeer.sessionToken,
+              startingPlayerId,
+              opponent: { id: joinRes.player.id, name: joinRes.player.name, avatar: joinRes.player.avatar },
+              room: room.getSnapshot(matchedPeer.playerId)
+            });
+
+            send(ws, 'quick_match_found', {
+              code: room.code,
+              playerId: joinRes.player.id,
+              sessionToken: joinRes.player.sessionToken,
+              startingPlayerId,
+              opponent: { id: matchedPeer.playerId, name: matchedPeer.name, avatar: matchedPeer.avatar },
+              room: room.getSnapshot(joinRes.player.id)
+            });
+
+            broadcastToRoom(room, 'start_arranging', { startingPlayerId });
+            syncRoomState(room);
+          } else {
+            const timeoutTimer = setTimeout(() => {
+              const removed = removeFromQuickMatchQueue(ws);
+              if (removed && ws.readyState === WebSocket.OPEN) {
+                send(ws, 'matchmaking_timeout', {
+                  message: 'No live opponent joined within 25 seconds. Try Private Room or Practice vs AI.'
+                });
+              }
+            }, QUICK_MATCH_TIMEOUT_MS);
+            if (timeoutTimer.unref) timeoutTimer.unref();
+
+            const entry = {
+              ws,
+              playerId,
+              sessionToken,
+              name,
+              avatar,
+              turnTimerSeconds,
+              seriesTargetWins,
+              queuedAt: Date.now(),
+              timeoutTimer
+            };
+            quickMatchQueue.push(entry);
+
+            const existingClient = socketClients.get(ws) || {};
+            socketClients.set(ws, { ...existingClient, playerId, sessionToken, name, avatar });
+
+            send(ws, 'quick_match_queued', {
+              position: quickMatchQueue.length,
+              timeoutSeconds: Math.round(QUICK_MATCH_TIMEOUT_MS / 1000)
+            });
+          }
+          break;
+        }
+
+        case 'cancel_quick_match': {
+          removeFromQuickMatchQueue(ws);
+          send(ws, 'quick_match_cancelled', { cancelled: true });
+          break;
+        }
+
         // --- Room Creation & Joining ---
         case 'create_room': {
-          // Rate limit creation
-          if (!deviceRooms.checkRateLimit(ip, 'create', 15, 60 * 1000)) {
+          if (!deviceRooms.checkRateLimit(ip, 'create', 25, 60 * 1000)) {
             send(ws, 'error', { message: 'Too many room creations. Please wait a moment.' });
             return;
           }
 
+          removeFromQuickMatchQueue(ws);
           const hostPlayerId = payload.playerId || `p-${crypto.randomBytes(3).toString('hex')}`;
           const hostSessionToken = payload.sessionToken || crypto.randomBytes(16).toString('hex');
           const hostName = payload.name || 'Player 1';
           const hostAvatar = payload.avatar || '🦊';
 
-          const room = deviceRooms.createRoom(hostPlayerId, hostSessionToken, hostName, hostAvatar);
+          const room = deviceRooms.createRoom(
+            hostPlayerId,
+            hostSessionToken,
+            hostName,
+            hostAvatar,
+            payload.settings || {}
+          );
           const hostPlayer = room.players[0];
           hostPlayer.ws = ws;
+
+          friendsManager.registerUser(hostPlayerId, hostName, hostAvatar, ws);
 
           socketClients.set(ws, {
             roomCode: room.code,
             playerId: hostPlayerId,
             sessionToken: hostSessionToken,
+            name: hostName,
+            avatar: hostAvatar,
             lastReactionAt: 0
           });
 
@@ -322,11 +665,12 @@ wss.on('connection', (ws, req) => {
           if (!room) {
             send(ws, 'error', {
               code: 'ROOM_NOT_FOUND',
-              message: 'Room not found. Check the code and try again.'
+              message: 'Room not found. Check the 5-character code and try again.'
             });
             return;
           }
 
+          removeFromQuickMatchQueue(ws);
           const playerId = payload.playerId || `p-${crypto.randomBytes(3).toString('hex')}`;
           const sessionToken = payload.sessionToken || crypto.randomBytes(16).toString('hex');
           const name = payload.name || 'Guest';
@@ -335,13 +679,12 @@ wss.on('connection', (ws, req) => {
           const joinResult = room.join(playerId, sessionToken, name, avatar, ws);
           if (!joinResult.success) {
             send(ws, 'error', {
-              code: 'ROOM_FULL',
+              code: joinResult.code || 'ROOM_FULL',
               message: joinResult.error || 'Unable to join room.'
             });
             return;
           }
 
-          // Tab conflict resolution: if this sessionToken was already connected on another socket, kick old socket
           if (joinResult.isReconnect && joinResult.oldWs && joinResult.oldWs !== ws) {
             send(joinResult.oldWs, 'tab_conflict', {
               message: 'Opened in another tab. This session is now inactive.'
@@ -349,10 +692,14 @@ wss.on('connection', (ws, req) => {
             try { joinResult.oldWs.close(); } catch {}
           }
 
+          friendsManager.registerUser(joinResult.player.id, joinResult.player.name, joinResult.player.avatar, ws);
+
           socketClients.set(ws, {
             roomCode: room.code,
             playerId: joinResult.player.id,
             sessionToken: joinResult.player.sessionToken,
+            name: joinResult.player.name,
+            avatar: joinResult.player.avatar,
             lastReactionAt: 0
           });
 
@@ -364,7 +711,6 @@ wss.on('connection', (ws, req) => {
             room: room.getSnapshot(joinResult.player.id)
           });
 
-          // Broadcast presence
           if (joinResult.wasPaused) {
             broadcastToRoom(room, 'player_reconnected', {
               playerId: joinResult.player.id,
@@ -407,13 +753,14 @@ wss.on('connection', (ws, req) => {
           const { allReady } = room.setReady(client.playerId, payload.ready);
           syncRoomState(room);
 
-          // If both players are ready in lobby, host or server can start arranging!
           if (allReady && room.status === 'lobby') {
-            room.startArranging();
-            broadcastToRoom(room, 'start_arranging', {
-              startingPlayerId: room.lastStartingPlayerId
-            });
-            syncRoomState(room);
+            const arr = room.startArranging();
+            if (!arr.error) {
+              broadcastToRoom(room, 'start_arranging', {
+                startingPlayerId: arr.startingPlayerId
+              });
+              syncRoomState(room);
+            }
           }
           break;
         }
@@ -422,10 +769,30 @@ wss.on('connection', (ws, req) => {
           const client = socketClients.get(ws);
           if (!client) return;
           const room = deviceRooms.getRoom(client.roomCode);
-          if (room && room.hostPlayerId === client.playerId && room.status === 'lobby') {
-            room.startArranging();
+          if (!room) return;
+
+          if (room.hostPlayerId !== client.playerId) {
+            send(ws, 'error', { message: 'Only the room host can start the match.' });
+            return;
+          }
+          if (room.players.length < 2) {
+            send(ws, 'error', { message: 'Wait for an opponent or add a Practice Bot before starting.' });
+            return;
+          }
+          const guestNotReady = room.players.some(p => !p.isHost && !p.isBot && !p.isReady);
+          if (guestNotReady) {
+            send(ws, 'error', { message: 'Opponent must tap Ready before starting.' });
+            return;
+          }
+
+          if (room.status === 'lobby') {
+            const arr = room.startArranging();
+            if (arr.error) {
+              send(ws, 'error', { message: arr.error });
+              return;
+            }
             broadcastToRoom(room, 'start_arranging', {
-              startingPlayerId: room.lastStartingPlayerId
+              startingPlayerId: arr.startingPlayerId
             });
             syncRoomState(room);
           }
@@ -447,6 +814,9 @@ wss.on('connection', (ws, req) => {
           send(ws, 'board_locked', { playerId: client.playerId });
 
           if (lockRes.matchStarted) {
+            for (const p of room.players) {
+              if (!p.isBot) friendsManager.setUserStatus(p.id, 'in_game');
+            }
             broadcastToRoom(room, 'match_started', {
               currentTurnPlayerId: lockRes.currentTurnPlayerId,
               turnDeadline: room.turnDeadline
@@ -472,10 +842,8 @@ wss.on('connection', (ws, req) => {
               return;
             }
 
-            // Restart turn timer
             room._startTurnTimerIfNeeded();
 
-            // Broadcast called number
             broadcastToRoom(room, 'number_called', {
               number: callRes.number,
               turnPlayerId: callRes.turnPlayerId,
@@ -485,7 +853,6 @@ wss.on('connection', (ws, req) => {
               isAutoPicked: false
             });
 
-            // Dispatch lines completed events
             for (const evt of callRes.events) {
               const p = room.findPlayerById(evt.recipientId);
               if (p && p.ws) {
@@ -547,11 +914,8 @@ wss.on('connection', (ws, req) => {
           const room = deviceRooms.getRoom(client.roomCode);
           if (!room) return;
 
-          // Rate limit: 1 reaction per 2 seconds
           const now = Date.now();
-          if (now - (client.lastReactionAt || 0) < 2000) {
-            return;
-          }
+          if (now - (client.lastReactionAt || 0) < 2000) return;
           client.lastReactionAt = now;
 
           const emoji = String(payload.emoji || '🔥').slice(0, 4);
@@ -587,7 +951,8 @@ wss.on('connection', (ws, req) => {
             broadcastToRoom(room, 'player_left', { playerId: client.playerId });
             syncRoomState(room);
           }
-          socketClients.delete(ws);
+          client.roomCode = null;
+          friendsManager.setUserStatus(client.playerId, 'online');
           break;
         }
 
@@ -604,7 +969,7 @@ wss.on('connection', (ws, req) => {
         // --- Economy, Rewards, Tournaments & Leaderboards ---
         case 'get_wallet': {
           const playerId = payload.playerId || socketClients.get(ws)?.playerId || 'guest';
-          const wallet = economy.getWallet(playerId);
+          const wallet = await walletService.getWallet(playerId).catch(() => economy.getWallet(playerId));
           send(ws, 'wallet_data', wallet);
           break;
         }
@@ -622,6 +987,7 @@ wss.on('connection', (ws, req) => {
             description: '🎁 Daily Login Reward: 100 Coins'
           };
           acc.history.unshift(tx);
+          await walletService.awardCoins(playerId, 100, 'DAILY_REWARD', 'Daily Login Bonus').catch(() => {});
           send(ws, 'daily_reward_claimed', {
             balance: acc.balance,
             transaction: tx
@@ -630,150 +996,272 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'get_tournaments': {
+          const list = await tournamentService.getTournaments();
+          const ko = list.find(t => t.format === 'knockout');
+          const league = list.find(t => t.format === 'league');
           send(ws, 'tournaments_data', {
-            knockout: {
-              id: 'tourn-ko-1',
-              title: 'Cobalt Cup Knockout',
-              prizePool: 2500,
-              entryFee: 100,
-              status: 'LIVE',
-              rounds: [
-                {
-                  name: 'Quarterfinals',
-                  matches: [
-                    { id: 'm1', p1: { name: 'You', score: 5, winner: true }, p2: { name: 'Viper99', score: 3 } },
-                    { id: 'm2', p1: { name: 'Alex_Pro', score: 5, winner: true }, p2: { name: 'Zara', score: 4 } },
-                    { id: 'm3', p1: { name: 'Rohit', score: 5, winner: true }, p2: { name: 'Kiran', score: 2 } },
-                    { id: 'm4', p1: { name: 'Shadow', score: 5, winner: true }, p2: { name: 'Priya', score: 1 } }
-                  ]
-                },
-                {
-                  name: 'Semifinals',
-                  matches: [
-                    { id: 'm5', p1: { name: 'You', score: 0 }, p2: { name: 'Alex_Pro', score: 0 } },
-                    { id: 'm6', p1: { name: 'Rohit', score: 0 }, p2: { name: 'Shadow', score: 0 } }
-                  ]
-                },
-                {
-                  name: 'Final',
-                  matches: [
-                    { id: 'm7', p1: { name: 'TBD', score: 0 }, p2: { name: 'TBD', score: 0 } }
-                  ]
-                }
-              ]
-            },
-            league: {
-              id: 'tourn-lg-1',
-              title: 'Premier Bingo League',
-              prizePool: 5000,
-              standings: [
-                { rank: 1, name: 'Alex_Pro', avatar: '⚡', mp: 10, w: 9, l: 1, pts: 27 },
-                { rank: 2, name: 'Rohit', avatar: '🦊', mp: 10, w: 8, l: 2, pts: 24 },
-                { rank: 3, name: 'You', avatar: '🎮', mp: 10, w: 7, l: 3, pts: 21 },
-                { rank: 4, name: 'Shadow', avatar: '🐱', mp: 10, w: 6, l: 4, pts: 18 },
-                { rank: 5, name: 'Zara', avatar: '🐼', mp: 10, w: 5, l: 5, pts: 15 },
-                { rank: 6, name: 'Viper99', avatar: '🐍', mp: 10, w: 4, l: 6, pts: 12 },
-                { rank: 7, name: 'Kiran', avatar: '🐯', mp: 10, w: 2, l: 8, pts: 6 },
-                { rank: 8, name: 'Priya', avatar: '🐰', mp: 10, w: 1, l: 9, pts: 3 }
-              ]
-            }
+            tournaments: list,
+            knockout: ko ? {
+              id: ko.id,
+              title: ko.title,
+              prizePool: ko.prizePool,
+              entryFee: ko.entryFee,
+              status: ko.status,
+              rounds: ko.stages?.[0]?.rounds || []
+            } : null,
+            league: league ? {
+              id: league.id,
+              title: league.title,
+              prizePool: league.prizePool,
+              entryFee: league.entryFee,
+              status: league.status,
+              standings: league.stages?.[0]?.standings || league.pointsTable || []
+            } : null
           });
           break;
         }
 
         case 'get_leaderboard': {
+          const category = payload.category || 'global';
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId;
+          const rows = await userService.getLeaderboard(20, 'wins').catch(() => []);
+          const formatted = rows.map((r, idx) => ({
+            rank: idx + 1,
+            id: r.id,
+            name: r.username,
+            avatar: r.avatar || '🦊',
+            wins: r.wins || 0,
+            winRate: `${r.winRate || 0}%`,
+            coins: r.coins || 0,
+            medal: idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : undefined,
+            isMe: Boolean(playerId && r.id === playerId)
+          }));
+          const myEntry = formatted.find(r => r.isMe) || { rank: formatted.length + 1, wins: 0, winRate: '0%', coins: 0 };
           send(ws, 'leaderboard_data', {
-            top3: [
-              { rank: 1, name: 'Alex_Pro', avatar: '⚡', wins: 142, winRate: '78%', coins: 8450, medal: 'gold' },
-              { rank: 2, name: 'Rohit', avatar: '🦊', wins: 128, winRate: '74%', coins: 6920, medal: 'silver' },
-              { rank: 3, name: 'LuckyStar', avatar: '⭐', wins: 115, winRate: '71%', coins: 5800, medal: 'bronze' }
-            ],
-            ranks: [
-              { rank: 4, name: 'Shadow', avatar: '🐱', wins: 98, winRate: '65%', coins: 4320 },
-              { rank: 5, name: 'Zara', avatar: '🐼', wins: 87, winRate: '62%', coins: 3950 },
-              { rank: 6, name: 'BingoViper', avatar: '🐍', wins: 76, winRate: '59%', coins: 3100 },
-              { rank: 7, name: 'CyberSam', avatar: '🤖', wins: 64, winRate: '55%', coins: 2800 },
-              { rank: 8, name: 'Kiran', avatar: '🐯', wins: 55, winRate: '52%', coins: 2350 },
-              { rank: 9, name: 'NeonRider', avatar: '🚀', wins: 49, winRate: '49%', coins: 1980 },
-              { rank: 10, name: 'Priya', avatar: '🐰', wins: 42, winRate: '46%', coins: 1650 }
-            ],
-            userRank: {
-              rank: 14,
-              wins: 28,
-              winRate: '68%',
-              coins: economy.getWallet(payload.playerId || 'guest').balance
-            }
+            category,
+            top3: formatted.slice(0, 3),
+            ranks: formatted.slice(3),
+            userRank: myEntry
           });
           break;
         }
 
-        // --- Friends Directory & Challenges (Mode 4) ---
         case 'get_friends_list': {
-          const playerId = payload.playerId || socketClients.get(ws)?.playerId || 'guest';
-          const friends = friendsManager.getFriendsList(playerId);
-          send(ws, 'friends_list_data', { friends });
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId;
+          const onlinePeers = friendsManager.getFriendsList(playerId, false);
+          const dbFriends = playerId ? await friendService.getFriends(playerId).catch(() => []) : [];
+          const merged = [...dbFriends];
+          for (const peer of onlinePeers) {
+            if (!merged.some(f => f.id === peer.id)) {
+              merged.push(peer);
+            }
+          }
+          send(ws, 'friends_list_data', { friends: merged });
           break;
         }
 
         case 'send_challenge': {
-          const fromId = payload.fromId || socketClients.get(ws)?.playerId || 'p1';
-          const fromName = payload.fromName || 'Player';
-          const fromAvatar = payload.fromAvatar || '🦊';
+          const fromId = payload.fromId || socketClients.get(ws)?.playerId;
+          const fromName = payload.fromName || socketClients.get(ws)?.name || 'Player';
+          const fromAvatar = payload.fromAvatar || socketClients.get(ws)?.avatar || '🦊';
           const targetFriendId = payload.targetFriendId;
 
-          const challenge = friendsManager.createChallenge({ id: fromId, name: fromName, avatar: fromAvatar }, targetFriendId);
-          send(ws, 'challenge_sent', { challenge });
+          if (!fromId || !targetFriendId) {
+            send(ws, 'error', { message: 'Invalid challenge sender or target.' });
+            break;
+          }
 
-          // If target friend is an AI/mock friend or online player, simulate realistic duel accept
-          setTimeout(() => {
-            const code = deviceRooms.createRoom(fromId, `tok-${fromId}`, fromName, fromAvatar);
-            const room = deviceRooms.getRoom(code);
-            const friendName = targetFriendId.includes('alex') ? 'Alex_Pro' : (targetFriendId.includes('rohit') ? 'Rohit' : 'Friend_Duelist');
-            room.joinPlayer(`bot-${Date.now()}`, `tok-f`, friendName, '⚡');
-            send(ws, 'challenge_accepted', {
-              challengeId: challenge.id,
-              roomCode: code,
-              opponentName: friendName
+          const targetUser = friendsManager.getUser(targetFriendId);
+          if (!targetUser || !targetUser.ws || targetUser.ws.readyState !== WebSocket.OPEN) {
+            send(ws, 'error', {
+              code: 'PLAYER_OFFLINE',
+              message: 'That player is not currently online. Share a private room code instead.'
             });
-          }, 1500);
+            break;
+          }
+
+          const challenge = friendsManager.createChallenge(
+            { id: fromId, name: fromName, avatar: fromAvatar },
+            targetFriendId
+          );
+          send(ws, 'challenge_sent', { challenge });
+          send(targetUser.ws, 'challenge_received', { challenge });
           break;
         }
 
-        // --- Friends Custom Tournaments (Modes 5, 6, 11, 12, 13) ---
+        case 'respond_challenge': {
+          const responderId = payload.playerId || socketClients.get(ws)?.playerId;
+          const res = friendsManager.respondToChallenge(payload.challengeId, Boolean(payload.accept));
+          if (!res.success) {
+            send(ws, 'error', { message: res.error });
+            break;
+          }
+          const challenge = res.challenge;
+          const sender = friendsManager.getUser(challenge.fromId);
+          if (!Boolean(payload.accept)) {
+            if (sender?.ws) {
+              send(sender.ws, 'challenge_declined', { challengeId: challenge.id, byName: payload.name || 'Player' });
+            }
+            break;
+          }
+
+          const responderName = payload.name || socketClients.get(ws)?.name || 'Challenger';
+          const responderAvatar = payload.avatar || socketClients.get(ws)?.avatar || '🐼';
+
+          const room = deviceRooms.createRoom(challenge.fromId, `chal-${challenge.fromId}`, challenge.fromName, challenge.fromAvatar);
+          if (sender?.ws) {
+            room.players[0].ws = sender.ws;
+            socketClients.set(sender.ws, {
+              roomCode: room.code,
+              playerId: challenge.fromId,
+              sessionToken: room.players[0].sessionToken,
+              name: challenge.fromName,
+              avatar: challenge.fromAvatar,
+              lastReactionAt: 0
+            });
+          }
+          const joined = room.join(responderId || challenge.toId, `chal-${responderId || challenge.toId}`, responderName, responderAvatar, ws);
+          if (joined.player) {
+            socketClients.set(ws, {
+              roomCode: room.code,
+              playerId: joined.player.id,
+              sessionToken: joined.player.sessionToken,
+              name: joined.player.name,
+              avatar: joined.player.avatar,
+              lastReactionAt: 0
+            });
+          }
+
+          if (sender?.ws) {
+            send(sender.ws, 'challenge_accepted', {
+              challengeId: challenge.id,
+              roomCode: room.code,
+              opponentName: responderName
+            });
+          }
+          send(ws, 'challenge_accepted', {
+            challengeId: challenge.id,
+            roomCode: room.code,
+            opponentName: challenge.fromName
+          });
+          syncRoomState(room);
+          break;
+        }
+
+        // --- Tournament Realtime Messages ---
         case 'create_custom_tournament': {
           const creatorId = payload.creatorId || socketClients.get(ws)?.playerId || 'p1';
-          const creatorName = payload.creatorName || 'Host';
-          const format = payload.format || 'LEAGUE'; // 'KNOCKOUT' | 'LEAGUE' | 'HYBRID'
-          const title = payload.title || 'Friends Premier Cup';
-          const maxParticipants = Number(payload.maxParticipants) || 8;
-          const pointsPerWin = Number(payload.pointsPerWin) || 2;
-          const pointsPerLoss = Number(payload.pointsPerLoss) || 0;
-
-          const tourn = tournamentManager.createTournament(format, title, creatorId, creatorName, {
-            maxParticipants,
-            pointsPerWin,
-            pointsPerLoss,
-            qualificationSlots: 4
+          const creatorName = payload.creatorName || socketClients.get(ws)?.name || 'Host';
+          const snapshot = await tournamentService.createTournamentSnapshot({
+            ...payload,
+            creatorId,
+            creatorName
           });
-
-          send(ws, 'custom_tournament_created', { tournament: tourn.getSnapshot() });
+          send(ws, 'custom_tournament_created', { tournament: snapshot });
+          broadcastGlobal('tournament_updated', { tournament: snapshot });
           break;
         }
 
         case 'start_custom_tournament': {
-          const tourn = tournamentManager.getTournament(payload.tournamentId);
-          if (tourn) {
-            const snapshot = tourn.startTournament();
-            send(ws, 'tournament_updated', { tournament: snapshot });
+          const result = await tournamentService.startTournament(payload.tournamentId, payload.hostId || null);
+          if (result.success) {
+            broadcastGlobal('tournament_updated', { tournament: result.tournament });
+          } else {
+            send(ws, 'error', { message: result.error });
+          }
+          break;
+        }
+
+        case 'join_custom_tournament': {
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId;
+          const playerName = payload.playerName || socketClients.get(ws)?.name || 'Player';
+          const res = await tournamentService.joinTournament({
+            tournamentId: payload.tournamentId,
+            code: payload.code,
+            playerId,
+            playerName
+          });
+          if (!res.success) {
+            send(ws, 'error', { message: res.error });
+            break;
+          }
+          send(ws, 'tournament_joined', { tournament: res.tournament });
+          broadcastGlobal('tournament_updated', { tournament: res.tournament });
+          break;
+        }
+
+        case 'start_tournament_match': {
+          const res = await tournamentService.startMatch(
+            payload.tournamentId,
+            payload.matchId,
+            payload.playerId || socketClients.get(ws)?.playerId
+          );
+          if (!res.success) {
+            send(ws, 'error', { message: res.error });
+            break;
+          }
+          send(ws, 'tournament_match_ready', {
+            roomCode: res.roomCode,
+            tournamentId: res.tournamentId,
+            matchId: res.matchId,
+            tournament: res.tournament
+          });
+          break;
+        }
+
+        case 'kick_tournament_participant': {
+          const res = await tournamentService.kickParticipant(payload.tournamentId, payload.hostId, payload.playerId);
+          if (res.success) {
+            broadcastGlobal('tournament_updated', { tournament: res.tournament });
+          } else {
+            send(ws, 'error', { message: res.error });
+          }
+          break;
+        }
+
+        case 'cancel_custom_tournament': {
+          const res = await tournamentService.cancelTournament(payload.tournamentId, payload.hostId, payload.reason);
+          if (res.success) {
+            broadcastGlobal('tournament_updated', { tournament: res.tournament });
+          } else {
+            send(ws, 'error', { message: res.error });
+          }
+          break;
+        }
+
+        case 'join_tournament_lobby': {
+          const tournId = payload.tournamentId;
+          const playerId = payload.playerId || socketClients.get(ws)?.playerId;
+          if (!tournId || !playerId) break;
+          const prev = socketClients.get(ws) || {};
+          socketClients.set(ws, { ...prev, playerId, tournamentLobbyId: tournId });
+          await tournamentService.setParticipantOnline(tournId, playerId, true);
+          break;
+        }
+
+        case 'leave_tournament_lobby': {
+          const prev = socketClients.get(ws) || {};
+          const tournId = payload.tournamentId || prev.tournamentLobbyId;
+          const playerId = payload.playerId || prev.playerId;
+          if (prev.tournamentLobbyId) {
+            socketClients.set(ws, { ...prev, tournamentLobbyId: null });
+          }
+          if (tournId && playerId) {
+            await tournamentService.setParticipantOnline(tournId, playerId, false);
           }
           break;
         }
 
         case 'record_tournament_match_outcome': {
-          const tourn = tournamentManager.getTournament(payload.tournamentId);
-          if (tourn) {
-            const snapshot = tourn.recordMatchResult(payload.matchId, payload.winnerId);
-            send(ws, 'tournament_updated', { tournament: snapshot });
+          const res = await tournamentService.recordVerifiedMatchResult(payload.tournamentId, {
+            matchId: payload.matchId,
+            winnerId: payload.winnerId,
+            scores: payload.scores
+          });
+          if (res.success) {
+            broadcastGlobal('tournament_updated', { tournament: res.tournament });
+          } else {
+            send(ws, 'error', { message: res.error });
           }
           break;
         }
@@ -784,10 +1272,18 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    removeFromQuickMatchQueue(ws);
+
     const client = socketClients.get(ws);
     if (!client) return;
 
-    const room = deviceRooms.getRoom(client.roomCode);
+    friendsManager.unregisterUser(client.playerId, ws);
+
+    if (client.tournamentLobbyId && client.playerId) {
+      tournamentService.setParticipantOnline(client.tournamentLobbyId, client.playerId, false).catch(() => {});
+    }
+
+    const room = client.roomCode ? deviceRooms.getRoom(client.roomCode) : null;
     if (room) {
       const dcInfo = room.handleDisconnect(client.playerId, (winnerId, reason) => {
         handleVictory(room, {
@@ -817,7 +1313,26 @@ export { server, wss };
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain) {
+  const bundle = getBundleStatus();
+  if (!bundle.ready) {
+    console.error(
+      `[Bingo Server] Startup aborted: built frontend artifacts missing or incomplete (${DIST_JS_PATH}, ${DIST_CSS_PATH}). Run "npm run build" first.`
+    );
+    process.exit(1);
+  }
+
+  checkDatabaseConnection()
+    .then(async (connected) => {
+      const restored = await tournamentService.hydrateFromStorage();
+      if (connected) {
+        console.log(`[Database] PostgreSQL connected via Prisma (restored ${restored} tournaments)`);
+      } else {
+        console.log(`[Database] PostgreSQL offline — offline_fallback mode active (restored ${restored} tournaments from local store)`);
+      }
+    })
+    .catch(() => {});
+
   server.listen(PORT, () => {
-    console.log(`[Bingo Night Desk Server] Running live at http://localhost:${PORT}`);
+    console.log(`[Bingo Night Desk Server] Running live at http://localhost:${PORT} (bundle ${(bundle.jsBytes / 1024).toFixed(1)} KB)`);
   });
 }

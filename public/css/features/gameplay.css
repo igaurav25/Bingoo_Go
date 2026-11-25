@@ -392,3 +392,55 @@
 .emote-btn:active {
   transform: scale(1.2);
 }
+
+/* 7. LANDSCAPE MOBILE VIEWPORT OPTIMIZATION */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app-container.gameplay-active {
+    max-width: 920px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .gameplay-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto auto auto 1fr;
+    column-gap: 16px;
+    row-gap: 4px;
+    align-items: center;
+    padding: 4px 12px;
+  }
+
+  .board-game-container {
+    grid-column: 1;
+    grid-row: 1 / span 5;
+    width: min(88vh, 320px);
+    height: min(88vh, 320px);
+    margin: 0;
+  }
+
+  .gameplay-top-bar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .turn-status-strip {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .bingo-word-row {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .bingo-claim-container {
+    grid-column: 2;
+    grid-row: 4;
+  }
+
+  .gameplay-bottom-tray {
+    grid-column: 2;
+    grid-row: 5;
+  }
+}

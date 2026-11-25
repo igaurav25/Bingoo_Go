@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Offline — Bingo</title>
+  <meta name="theme-color" content="#090e17">
+  <link rel="icon" type="image/svg+xml" href="/assets/icon-192.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@700;800&family=Noto+Sans+Devanagari:wght@600;700&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-night: #090e17;
+      --color-night-2: #131c2d;
+      --color-accent: #f59e0b;
+      --color-paper: #f8f5ee;
+      --pen-red: #d9383a;
+      --text-muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: radial-gradient(circle at 50% 25%, #1a2744 0%, var(--color-night) 75%);
+      color: #f1f5f9;
+      font-family: 'Figtree', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .offline-card {
+      background: rgba(19, 28, 45, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .badge-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 56, 58, 0.2));
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 20px;
+    }
+    h1 {
+      font-family: 'Instrument Sans', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .subtitle-hindi {
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--color-accent);
+      margin-bottom: 16px;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .btn-retry {
+      min-height: 52px;
+      padding: 0 28px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, #f59e0b, #d97706);
+      color: #090e17;
+      font-family: 'Instrument Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-retry:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
+    }
+    .note {
+      margin-top: 18px;
+      font-size: 0.8rem;
+      color: rgba(148, 163, 184, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-card">
+    <div class="badge-icon" aria-hidden="true">📡</div>
+    <h1>You're Offline</h1>
+    <div class="subtitle-hindi">इंटरनेट कनेक्शन नहीं है</div>
+    <p>
+      Connect to the internet to resume your live Bingo match with friends. Your seat will be held automatically!
+    </p>
+    <button class="btn-retry" id="retry-btn">
+      <span>🔄 Try Reconnecting</span>
+    </button>
+    <div class="note">Automatically reconnects as soon as network returns.</div>
+  </div>
+
+  <script>
+    document.getElementById('retry-btn').addEventListener('click', () => {
+      window.location.reload();
+    });
+
+    // Auto-reload when network connectivity is restored
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

@@ -20,6 +20,16 @@
   background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
 }
 
+/* Ambient Rainy Night Canvas (Two-in-the-morning) */
+.rain-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Confetti overlay */
 #confetti-canvas {
   position: fixed;
@@ -216,13 +226,27 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   padding: 8px 12px 76px;
   position: relative;
 }
 
+.screen-view::-webkit-scrollbar {
+  display: none;
+}
+
 .screen-view.hidden {
   display: none !important;
+}
+
+.screen-view.gameplay-layout,
+#screen-game,
+#screen-arrange,
+#screen-react-game {
+  overflow: hidden !important;
 }
 
 /* Dedicated internal smooth scroll area for lists and feeds */
@@ -242,3 +266,27 @@
 .screen-scrollable::-webkit-scrollbar {
   display: none;
 }
+
+/* ==================== GRAPHICS QUALITY MODES ==================== */
+html.quality-low *,
+html.quality-low *::before,
+html.quality-low *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+html.quality-low .rain-canvas,
+html.quality-low #confetti-canvas {
+  display: none !important;
+}
+
+/* Reduced Motion Safety */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+

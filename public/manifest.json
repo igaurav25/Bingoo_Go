@@ -1,22 +1,27 @@
 {
-  "name": "Bingo - Play With Friends",
+  "name": "Bingo — Copy Ke Last Page Wala Bingo",
   "short_name": "Bingo",
-  "description": "Classic notebook-style 2D multiplayer Bingo game.",
+  "description": "The authentic 5x5 school copy notebook Bingo game played with friends. Free online multiplayer, no wagering, no login required.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#1B1B5E",
-  "theme_color": "#1B1B5E",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "background_color": "#090e17",
+  "theme_color": "#090e17",
+  "categories": ["games", "entertainment"],
+  "lang": "en",
   "icons": [
     {
       "src": "/assets/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
       "src": "/assets/icon-512.svg",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

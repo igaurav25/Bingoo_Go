@@ -32,7 +32,7 @@ import { soundManager } from './audio.js';
 import { ConfettiCelebration } from './confetti.js';
 import { generateQRCodeSVG } from './qrcode.js';
 import { t, setLanguage, getLanguage } from './i18n.js';
-import { initRain } from './rain.js';
+import { initRain, setGraphicsQuality, setRainInMatch } from './rain.js';
 
 class BingoApp {
   constructor() {
@@ -83,6 +83,9 @@ class BingoApp {
     this.friendsKoRoundIndex = 0;
     this.friendsHybridFixtureIndex = 0;
     this.friendsHybridStage = 'LEAGUE';
+    this.activeTournamentId = null;
+    this.activeTournamentMatchId = null;
+    if (typeof window !== 'undefined') window.gameClient = this;
 
     // Subsystems
     this.dom = this._cacheDOM();
@@ -164,6 +167,8 @@ class BingoApp {
       screenLeaderboard: document.getElementById('screen-leaderboard'),
       screenProfile: document.getElementById('screen-profile'),
       screenResult: document.getElementById('screen-result'),
+      screenReactGame: document.getElementById('screen-react-game'),
+      btnPlayReact: document.getElementById('btn-play-react'),
 
       // Dedicated Mode Hub & 13 Mode Screens
       screenModesHub: document.getElementById('screen-modes-hub'),
@@ -207,6 +212,7 @@ class BingoApp {
       tournCountChips: document.querySelectorAll('.tourn-count-chip'),
       btnStartTeam2v2: document.getElementById('btn-start-team-2v2'),
       friendsDirectoryList: document.getElementById('friends-directory-list'),
+      inputSearchFriends: document.getElementById('input-search-friends'),
       btnEnterModeKnockout: document.getElementById('btn-enter-mode-knockout'),
       btnPlayModeKoMatch: document.getElementById('btn-play-mode-ko-match'),
       modeKoFixtureText: document.getElementById('mode-ko-fixture-text'),
@@ -325,6 +331,8 @@ class BingoApp {
       statWinStreak: document.getElementById('stat-win-streak'),
       profileCoinBalance: document.getElementById('profile-coin-balance'),
       coinHistoryList: document.getElementById('coin-history-list'),
+      matchHistoryList: document.getElementById('match-history-list'),
+      matchHistoryCount: document.getElementById('match-history-count'),
 
       // Result Screen
       resultEmoji: document.getElementById('result-emoji'),
@@ -366,6 +374,7 @@ class BingoApp {
       toggleReducedMotion: document.getElementById('toggle-reduced-motion'),
 
       modalHowToPlay: document.getElementById('modal-how-to-play'),
+      btnGameplayHelp: document.getElementById('btn-gameplay-help'),
       modalQr: document.getElementById('modal-qr'),
       qrContainer: document.getElementById('qr-container'),
 
@@ -471,6 +480,12 @@ class BingoApp {
     if (this.dom.btnBrowseAllModes) {
       this.dom.btnBrowseAllModes.addEventListener('click', () => {
         this.navigateTo('modes-hub');
+      });
+    }
+
+    if (this.dom.btnPlayReact) {
+      this.dom.btnPlayReact.addEventListener('click', () => {
+        this.navigateTo('react-game');
       });
     }
 
@@ -991,7 +1006,26 @@ class BingoApp {
       this.dom.btnHomeFromResult.addEventListener('click', () => {
         this._send('leave_room');
         this.currentRoom = null;
-        this.navigateTo('home');
+        if (this.isTournamentMatchMode && this.activeTournamentId) {
+          const tournId = this.activeTournamentId;
+          this.navigateTo('tournaments');
+          if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', `/tournaments/${tournId}`);
+          }
+          if (window.mountReactTournaments) {
+            const tournRoot = document.getElementById('react-tournament-root');
+            if (tournRoot) {
+              window.mountReactTournaments(tournRoot, {
+                initialPath: `/tournaments/${tournId}`,
+                currentUserId: this.playerId,
+                currentUserName: this.nickname,
+                onPlayMatch: (match) => this.launchTournamentMatch(match)
+              });
+            }
+          }
+        } else {
+          this.navigateTo('home');
+        }
       });
     }
 
@@ -1036,6 +1070,16 @@ class BingoApp {
     });
 
     // Profile & Modal Openers
+    if (this.dom.lobbyPlayerBar) {
+      this.dom.lobbyPlayerBar.addEventListener('click', () => {
+        this._showScreen('profile');
+      });
+    }
+    if (this.dom.lobbyAvatarChip) {
+      this.dom.lobbyAvatarChip.addEventListener('click', () => {
+        this._showScreen('profile');
+      });
+    }
     if (this.dom.profileChipBtn) {
       this.dom.profileChipBtn.addEventListener('click', () => {
         this._openProfileModal();
@@ -1080,6 +1124,18 @@ class BingoApp {
     if (this.dom.btnHowToPlay) {
       this.dom.btnHowToPlay.addEventListener('click', () => {
         if (this.dom.modalHowToPlay) this.dom.modalHowToPlay.classList.remove('hidden');
+      });
+    }
+
+    if (this.dom.btnGameplayHelp) {
+      this.dom.btnGameplayHelp.addEventListener('click', () => {
+        if (this.dom.modalHowToPlay) this.dom.modalHowToPlay.classList.remove('hidden');
+      });
+    }
+
+    if (this.dom.inputSearchFriends) {
+      this.dom.inputSearchFriends.addEventListener('input', () => {
+        this._renderFriendsDirectory();
       });
     }
 
@@ -1135,6 +1191,7 @@ class BingoApp {
     if (this.dom.toggleVibration) {
       this.dom.toggleVibration.addEventListener('change', (e) => {
         this.vibrationEnabled = e.target.checked;
+        soundManager.setVibration(e.target.checked);
         localStorage.setItem('bingo_vibrate', String(e.target.checked));
       });
     }
@@ -1142,6 +1199,56 @@ class BingoApp {
     if (this.dom.toggleReducedMotion) {
       this.dom.toggleReducedMotion.addEventListener('change', (e) => {
         document.body.classList.toggle('reduce-motion', e.target.checked);
+      });
+    }
+
+    // Graphics Quality Selector
+    const gfxAuto = document.getElementById('btn-gfx-auto');
+    const gfxHigh = document.getElementById('btn-gfx-high');
+    const gfxLow = document.getElementById('btn-gfx-low');
+    const currentGfx = localStorage.getItem('bingo_graphics_quality') || 'auto';
+    [gfxAuto, gfxHigh, gfxLow].forEach(btn => {
+      if (btn) {
+        const q = btn.id.replace('btn-gfx-', '');
+        if (q === currentGfx) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+        btn.addEventListener('click', () => {
+          [gfxAuto, gfxHigh, gfxLow].forEach(b => b && b.classList.remove('active'));
+          btn.classList.add('active');
+          setGraphicsQuality(q);
+          soundManager.playTap();
+        });
+      }
+    });
+
+    // Replay Interactive Tutorial
+    const replayBtn = document.getElementById('btn-replay-tutorial');
+    if (replayBtn) {
+      replayBtn.addEventListener('click', () => {
+        if (this.dom.modalSettings) this.dom.modalSettings.classList.add('hidden');
+        if (this.dom.modalHowToPlay) this.dom.modalHowToPlay.classList.remove('hidden');
+      });
+    }
+
+    // Auto-Show Interactive Tutorial for First-Time Players
+    try {
+      const seen = localStorage.getItem('bingo_tutorial_seen');
+      if (!seen && this.dom.modalHowToPlay) {
+        this.dom.modalHowToPlay.classList.remove('hidden');
+      }
+    } catch {}
+
+    // Delete My Data / Clear Local Data
+    const clearBtn = document.getElementById('btn-clear-local-data');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (confirm('Clear all local data and reset profile?')) {
+          localStorage.clear();
+          window.location.href = '/';
+        }
       });
     }
 
@@ -1234,6 +1341,7 @@ class BingoApp {
    * Universal Router & Screen Switcher (Section 3)
    */
   navigateTo(targetScreen, addToHistory = true) {
+    if (targetScreen === 'modes') targetScreen = 'modes-hub';
     // Active Match Protection (Section 3)
     if ((this.status === 'playing' || this.status === 'arranging') && targetScreen !== 'playing' && targetScreen !== 'arranging') {
       this.pendingExitScreen = targetScreen;
@@ -1256,8 +1364,10 @@ class BingoApp {
   }
 
   _showScreen(screenName) {
+    if (screenName === 'modes') screenName = 'modes-hub';
     this.status = screenName;
-    const isGameplay = screenName === 'arranging' || screenName === 'playing' || screenName === 'arrange' || screenName === 'game';
+    const isGameplay = screenName === 'arranging' || screenName === 'playing' || screenName === 'arrange' || screenName === 'game' || screenName === 'react-game';
+    setRainInMatch(isGameplay);
 
     // Strict No-Scroll Rule: lock container height to 100dvh, hide main app header and bottom dock
     if (this.dom.appRoot) {
@@ -1278,6 +1388,15 @@ class BingoApp {
     if (!targetEl) {
       if (screenName === 'arranging' || screenName === 'arrange') targetEl = document.getElementById('screen-arrange');
       else if (screenName === 'playing' || screenName === 'game') targetEl = document.getElementById('screen-game');
+      else if (screenName === 'react-game') {
+        targetEl = document.getElementById('screen-react-game');
+        if (window.mountReactBingo) {
+          window.mountReactBingo(document.getElementById('react-bingo-root'), {
+            initialMode: 'practice',
+            onExit: () => this.navigateTo('home')
+          });
+        }
+      }
       else if (screenName === 'finished' || screenName === 'result') targetEl = document.getElementById('screen-result');
       else if (screenName.startsWith('mode-')) targetEl = document.getElementById(`screen-mode-${screenName.replace('mode-', '')}`);
     }
@@ -1302,6 +1421,19 @@ class BingoApp {
     // Refresh remote data when entering views
     if (screenName === 'tournaments' || screenName === 'mode-knockout' || screenName === 'mode-league') {
       this._send('get_tournaments');
+      if (window.mountReactTournaments) {
+        const tournRoot = document.getElementById('react-tournament-root');
+        if (tournRoot) {
+          window.mountReactTournaments(tournRoot, {
+            initialPath: window.location.pathname.startsWith('/tournaments') ? window.location.pathname : '/tournaments',
+            currentUserId: this.playerId,
+            currentUserName: this.nickname,
+            onPlayMatch: (match) => {
+              this.launchTournamentMatch(match);
+            }
+          });
+        }
+      }
     } else if (screenName === 'leaderboard') {
       this._send('get_leaderboard', { category: 'global' });
     } else if (screenName === 'profile') {
@@ -1309,6 +1441,51 @@ class BingoApp {
       this._renderProfileStats();
     } else if (screenName === 'mode-friend-challenge') {
       this._send('get_friends_list', { playerId: this.playerId });
+    }
+  }
+
+  launchTournamentMatch(match) {
+    if (!match) return;
+    const tournId = match.tournamentId || this.activeTournamentId || (window.location.pathname.startsWith('/tournaments/') ? window.location.pathname.split('/')[2] : null);
+    this.isTournamentMatchMode = true;
+    this.activeTournamentId = tournId;
+    this.activeTournamentMatchId = match.id;
+
+    const p1 = match.player1 || match.p1;
+    const p2 = match.player2 || match.p2;
+    const opp = (p1 && p1.id === this.playerId) ? p2 : (p2 || p1);
+
+    if (this.dom.gameOppName) this.dom.gameOppName.textContent = opp?.name || 'Tournament Opponent';
+    if (this.dom.gameOppAvatar) this.dom.gameOppAvatar.textContent = opp?.avatar || (opp?.isBot || (typeof opp?.id === 'string' && opp.id.startsWith('bot-')) ? '🤖' : '👤');
+
+    this.showToast(`Entering tournament match vs ${opp?.name || 'Opponent'}...`, 'info');
+
+    // If match has an active room code, join directly
+    if (match.roomCode) {
+      this.currentRoom = match.roomCode;
+      this._send('join_room', {
+        roomCode: match.roomCode,
+        name: this.nickname,
+        avatar: this.avatar,
+        playerId: this.playerId,
+        sessionToken: this.sessionToken
+      });
+      this.navigateTo('game');
+    } else {
+      // Request server to create/retrieve tournament match room
+      this._send('start_tournament_match', {
+        tournamentId: tournId,
+        matchId: match.id,
+        playerId: this.playerId
+      });
+
+      // If opponent is a bot or if offline, initialize smart bot match immediately
+      if (opp && (opp.isBot || (typeof opp.id === 'string' && opp.id.startsWith('bot-')))) {
+        this.botDifficulty = 'medium';
+        this.startPracticeBotMatch('medium');
+      } else {
+        this.navigateTo('game');
+      }
     }
   }
 
@@ -1323,6 +1500,18 @@ class BingoApp {
       this.navigateTo(`mode-${modeKey}`, false);
     } else if (path === '/modes') {
       this.navigateTo('modes-hub', false);
+    } else if (path.startsWith('/tournaments')) {
+      this.navigateTo('tournaments', false);
+      if (window.mountReactTournaments) {
+        const tournRoot = document.getElementById('react-tournament-root');
+        if (tournRoot) {
+          window.mountReactTournaments(tournRoot, {
+            initialPath: path,
+            currentUserId: this.playerId,
+            currentUserName: this.playerName
+          });
+        }
+      }
     } else {
       this.navigateTo('home', false);
     }
@@ -2201,8 +2390,44 @@ class BingoApp {
       }
 
       case 'custom_tournament_created':
+      case 'tournament_joined': {
+        this.activeTournamentId = msg.tournament?.id;
+        this.showToast(`🏆 Tournament: ${msg.tournament.name}`, 'success');
+        this.navigateTo('tournaments');
+        if (window.history && window.history.pushState) {
+          window.history.pushState({}, '', `/tournaments/${msg.tournament.id}`);
+        }
+        if (window.mountReactTournaments) {
+          const tournRoot = document.getElementById('react-tournament-root');
+          if (tournRoot) {
+            window.mountReactTournaments(tournRoot, {
+              initialPath: `/tournaments/${msg.tournament.id}`,
+              currentUserId: this.playerId,
+              currentUserName: this.nickname,
+              onPlayMatch: (match) => this.launchTournamentMatch(match)
+            });
+          }
+        }
+        break;
+      }
+
+      case 'tournament_match_ready': {
+        this.currentRoom = msg.roomCode;
+        this.activeTournamentId = msg.tournamentId;
+        this.activeTournamentMatchId = msg.matchId;
+        this.isTournamentMatchMode = true;
+        this._send('join_room', {
+          roomCode: msg.roomCode,
+          name: this.nickname,
+          avatar: this.avatar,
+          playerId: this.playerId,
+          sessionToken: this.sessionToken
+        });
+        this.navigateTo('game');
+        break;
+      }
+
       case 'tournament_updated': {
-        this.showToast(`🏆 Tournament Updated: ${msg.tournament.name}`, 'success');
         this._renderTournamentSnapshot(msg.tournament);
         break;
       }
@@ -2538,6 +2763,41 @@ class BingoApp {
     if (this.dom.turnText) {
       this.dom.turnText.textContent = isMyTurn ? t('yourTurn') : t('friendTurn', { name: this.dom.gameOppName?.textContent || 'Friend' });
     }
+    this._updateGuidanceBanner();
+  }
+
+  _updateGuidanceBanner(customText = null) {
+    const el = document.getElementById('guidance-banner-text');
+    if (!el) return;
+    if (customText) {
+      el.textContent = customText;
+      return;
+    }
+    if (this.status === 'arranging') {
+      const hasEmpty = this.grid && this.grid.some(n => n === null || n === 0);
+      el.textContent = hasEmpty 
+        ? '✏️ Tap empty cells to place numbers 1–25, or tap Auto Arrange.' 
+        : '🔒 Board ready! Tap "Confirm & Lock Board" below to enter the match.';
+      return;
+    }
+    if (this.status === 'playing') {
+      const count = this.completedLines ? this.completedLines.length : 0;
+      if (count >= 5) {
+        el.textContent = '🔥 5 LINES COMPLETE! Press the golden BINGO button NOW to claim victory!';
+      } else if (this.dom.turnIndicatorPill && this.dom.turnIndicatorPill.classList.contains('my-turn')) {
+        el.textContent = count === 0 
+          ? '👉 Your turn! Tap any remaining number on your card to call it.'
+          : `👉 Your turn! ${count}/5 lines completed. Tap next number!`;
+      } else {
+        el.textContent = count === 0 
+          ? '⏳ Waiting for opponent to call a number...'
+          : `⏳ Opponent's turn. You have ${count}/5 lines completed.`;
+      }
+      return;
+    }
+    if (this.status === 'finished') {
+      el.textContent = '🏁 Match concluded. Well played!';
+    }
   }
 
   _startTurnCountdown(deadline) {
@@ -2568,11 +2828,16 @@ class BingoApp {
       p.classList.toggle('f', idx < count);
     });
 
+    const claimHelpEl = document.getElementById('claim-help-text');
     if (count >= 5) {
       const wasLocked = this.dom.bingoClaimBtn.classList.contains('locked');
       this.dom.bingoClaimBtn.className = 'bingo-claim-btn active ready on';
       this.dom.bingoClaimBtn.disabled = false;
       if (this.dom.bingoBtnText) this.dom.bingoBtnText.textContent = 'BINGO!';
+      if (claimHelpEl) {
+        claimHelpEl.className = 'help-active';
+        claimHelpEl.textContent = '⚡ 5 Lines Complete! Tap BINGO to Claim Win!';
+      }
       if (wasLocked) {
         soundManager.playButtonReady();
         this._vibrate([80, 50, 120]);
@@ -2581,7 +2846,12 @@ class BingoApp {
       this.dom.bingoClaimBtn.className = 'bingo-claim-btn locked';
       this.dom.bingoClaimBtn.disabled = true;
       if (this.dom.bingoBtnText) this.dom.bingoBtnText.textContent = 'BINGO';
+      if (claimHelpEl) {
+        claimHelpEl.className = 'help-locked';
+        claimHelpEl.textContent = `🔒 ${count}/5 lines complete • Complete 5 lines to unlock`;
+      }
     }
+    this._updateGuidanceBanner();
   }
 
   handleClaimPress() {
@@ -2629,6 +2899,14 @@ class BingoApp {
 
   _handleTournamentMatchVictory() {
     this._saveLocalWin();
+
+    if (this.activeTournamentId && this.activeTournamentMatchId) {
+      this._send('record_tournament_match_outcome', {
+        tournamentId: this.activeTournamentId,
+        matchId: this.activeTournamentMatchId,
+        winnerId: this.playerId
+      });
+    }
 
     if (this.currentTournamentType === 'KNOCKOUT') {
       this.knockoutRoundIndex++;
@@ -2692,11 +2970,34 @@ class BingoApp {
         if (this.dom.scorePlayer2) this.dom.scorePlayer2.textContent = `${other?.name || 'Friend'}: ${msg.scores[other?.id] || 0}`;
       }
 
+      const oppPlayer = this.currentRoom?.players.find(p => p.id !== this.playerId);
+      this._recordMatchHistory({
+        id: `m-${Date.now()}`,
+        date: 'Just now',
+        mode: this.isTournamentMatchMode ? 'Tournament Match' : (this.activeMode || 'Casual 1v1'),
+        opponent: oppPlayer?.name || this.dom.gameOppName?.textContent || 'Opponent',
+        result: isWinner ? 'Victory' : 'Defeat',
+        score: msg.scores ? `${msg.scores[this.playerId] || (isWinner ? 5 : 3)} - ${msg.scores[oppPlayer?.id] || (isWinner ? 3 : 5)}` : (isWinner ? '5 - 3' : '3 - 5'),
+        coins: isWinner ? '+150 🪙' : '+25 🪙'
+      });
+
       if (isWinner) {
         soundManager.playVictory();
         this.confetti.burst(120);
         this._vibrate([100, 50, 100, 50, 200]);
         this._saveLocalWin();
+      }
+
+      if (this.isTournamentMatchMode) {
+        if (isWinner) {
+          this._handleTournamentMatchVictory();
+        } else {
+          if (this.dom.resultTitle) this.dom.resultTitle.textContent = 'Match Finished';
+          if (this.dom.resultDesc) this.dom.resultDesc.textContent = 'Opponent completed lines first. Result recorded on Tournament standings.';
+        }
+        if (this.dom.btnHomeFromResult) {
+          this.dom.btnHomeFromResult.innerHTML = '<span>🏆</span> Tournament';
+        }
       }
 
       this._showScreen('finished');
@@ -2732,11 +3033,30 @@ class BingoApp {
     setTimeout(() => floater.remove(), 1800);
   }
 
-  _renderFriendsDirectory(friends = []) {
+  _renderFriendsDirectory(friends = null) {
     if (!this.dom.friendsDirectoryList) return;
+    if (Array.isArray(friends)) {
+      this.friendsList = friends;
+    }
+    const currentList = this.friendsList || [];
+    const query = this.dom.inputSearchFriends ? this.dom.inputSearchFriends.value.trim().toLowerCase() : '';
+    const filtered = query
+      ? currentList.filter(f => (f.name || '').toLowerCase().includes(query))
+      : currentList;
+
     this.dom.friendsDirectoryList.innerHTML = '';
 
-    friends.forEach(f => {
+    if (filtered.length === 0) {
+      this.dom.friendsDirectoryList.innerHTML = `
+        <div style="text-align:center; padding:24px 12px; color:var(--text-secondary); font-size:0.9rem;">
+          <div style="font-size:2rem; margin-bottom:6px;">👥</div>
+          <div>${query ? `No friends found matching "${query}"` : 'No friends online yet'}</div>
+        </div>
+      `;
+      return;
+    }
+
+    filtered.forEach(f => {
       const card = document.createElement('div');
       card.className = 'friend-item-card';
       card.innerHTML = `
@@ -2964,6 +3284,65 @@ class BingoApp {
     }
   }
 
+  _recordMatchHistory(entry) {
+    try {
+      const stored = localStorage.getItem('bingo_match_history');
+      const list = stored ? JSON.parse(stored) : [
+        { id: 'm-1', date: 'Today, 12:40 PM', mode: 'Quick Match', opponent: 'Alex_Pro', result: 'Victory', score: '5 - 3', coins: '+150 🪙' },
+        { id: 'm-2', date: 'Yesterday, 8:15 PM', mode: 'Knockout Cup', opponent: 'Rohit', result: 'Defeat', score: '4 - 5', coins: '+30 🪙' },
+        { id: 'm-3', date: 'Nov 22, 4:20 PM', mode: 'Friend Duel', opponent: 'Zara', result: 'Victory', score: '5 - 2', coins: '+100 🪙' }
+      ];
+      list.unshift(entry);
+      if (list.length > 20) list.length = 20;
+      localStorage.setItem('bingo_match_history', JSON.stringify(list));
+    } catch {}
+  }
+
+  _renderMatchHistory() {
+    if (!this.dom.matchHistoryList) return;
+    try {
+      const stored = localStorage.getItem('bingo_match_history');
+      const list = stored ? JSON.parse(stored) : [
+        { id: 'm-1', date: 'Today, 12:40 PM', mode: 'Quick Match', opponent: 'Alex_Pro', result: 'Victory', score: '5 - 3', coins: '+150 🪙' },
+        { id: 'm-2', date: 'Yesterday, 8:15 PM', mode: 'Knockout Cup', opponent: 'Rohit', result: 'Defeat', score: '4 - 5', coins: '+30 🪙' },
+        { id: 'm-3', date: 'Nov 22, 4:20 PM', mode: 'Friend Duel', opponent: 'Zara', result: 'Victory', score: '5 - 2', coins: '+100 🪙' }
+      ];
+
+      if (this.dom.matchHistoryCount) {
+        this.dom.matchHistoryCount.textContent = `${list.length} matches`;
+      }
+
+      this.dom.matchHistoryList.innerHTML = '';
+      list.forEach(item => {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.padding = '10px 12px';
+        row.style.background = 'var(--bg-subtle)';
+        row.style.borderRadius = '10px';
+        row.style.borderLeft = item.result === 'Victory' ? '4px solid var(--mint-green)' : '4px solid var(--coral-red)';
+
+        const isWin = item.result === 'Victory';
+        row.innerHTML = `
+          <div>
+            <div style="font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+              <span>${isWin ? '🏆' : '💀'}</span>
+              <span>vs ${item.opponent || 'Opponent'}</span>
+              <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">• ${item.mode || 'Casual'}</span>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">${item.date} • Score: ${item.score || '5 - 3'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:800; font-size:0.9rem; color:${isWin ? 'var(--mint-green)' : 'var(--coral-red)'};">${item.result}</div>
+            <div style="font-size:0.75rem; color:var(--gold-dark); font-weight:700;">${item.coins || '+50 🪙'}</div>
+          </div>
+        `;
+        this.dom.matchHistoryList.appendChild(row);
+      });
+    } catch {}
+  }
+
   _renderProfileStats() {
     if (this.dom.profilePageAvatar) this.dom.profilePageAvatar.textContent = this.avatar;
     if (this.dom.profilePageName) this.dom.profilePageName.textContent = this.nickname;
@@ -2977,6 +3356,8 @@ class BingoApp {
     if (this.dom.statTotalWins) this.dom.statTotalWins.textContent = String(wins);
     if (this.dom.statWinRate) this.dom.statWinRate.textContent = `${rate}%`;
     if (this.dom.statWinStreak) this.dom.statWinStreak.textContent = `🔥 3`;
+
+    this._renderMatchHistory();
   }
 
   shareRoomLink() {
@@ -3034,6 +3415,10 @@ class BingoApp {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  window.bingoApp = new BingoApp();
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!window.__REACT_APP_ACTIVE__) {
+      window.bingoApp = new BingoApp();
+    }
+  });
+}

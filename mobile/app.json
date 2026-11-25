@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Bingo Championship",
+    "slug": "bingo-championship",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0C1422"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bingochampionship.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0C1422"
+      },
+      "package": "com.bingochampionship.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

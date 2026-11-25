@@ -1,85 +1,97 @@
 /**
  * public/css/variables.css
- * Master Color Tokens & Design System
- * Inspired by Subway Surfers (vibrant arcade) & BGMI (tactile game lobby)
+ * 
+ * Master Design System Tokens: "Last Page after dark"
+ * Premium competitive-game chrome on a rainy midnight;
+ * the board itself is tactile paper and ink.
+ * Realism comes from lighting, depth and materials, not clip-art.
+ * The memorable thing: the red pen.
  */
 
 :root {
-  /* Master Palette Tokens */
-  --primary-blue: #1769E0;
-  --primary-blue-dark: #123B78;
-  --primary-blue-light: #EBF2FD;
-  --primary-blue-border: #0D52B8;
+  /* ==================== "LAST PAGE AFTER DARK" MASTER TOKENS ==================== */
+  --bg: #0C1422;          /* page background */
+  --navy-900: #101827;    /* surface 1 (cards, top bar) */
+  --navy-800: #17243A;    /* surface 2 (elevated cards, inputs, ink on paper) */
+  --navy-700: #1E2E4A;    /* surface 3 (hover, active borders, +4% lightness) */
+  --royal: #2864D9;       /* primary actions, selection, marked numbers */
+  --electric: #438BFF;    /* links, focus ring, active tab */
+  --gold: #F3B94F;        /* winners, trophies, achievements, the ready BINGO button */
+  --white: #F4F6FA;       /* text on dark and paper sheet */
+  --slate: #8995A8;       /* secondary text, locked states, low-alpha borders */
+  --success: #32B879;     /* online status, success toasts, qualifications */
+  --danger: #E6535D;      /* errors, forfeits, warnings */
+  --pen-red: #D9383A;     /* strikes only (AA on paper, not --danger) */
+  --pen-red-lit: #FF4D4F; /* inner vibrant core of pen stroke */
+  --paper-rule: #C9D3E6;  /* pale blue ruled copybook lines */
 
-  --accent-orange: #FF8A24;
-  --accent-orange-dark: #E06F12;
-  --accent-orange-light: #FFF4EB;
+  /* Authentic Notebook Paper Sheet */
+  --sheet: #F4F6FA;
+  --sheet-ink: #17243A;
+  --sheet-rule: #C9D3E6;
 
-  --gold-yellow: #FFD447;
-  --gold-yellow-dark: #E6B922;
-  --gold-yellow-light: #FFF9E6;
+  /* Backward Compatibility Semantic Bindings */
+  --color-paper: var(--bg);
+  --color-paper-2: var(--navy-900);
+  --color-paper-3: var(--navy-800);
+  --color-rule: var(--navy-700);
+  --color-ink: var(--white);
+  --color-muted: var(--slate);
+  --color-accent: var(--gold);
+  --color-accent-ink: var(--navy-900);
+  --color-ok: var(--success);
+  --color-rain: rgba(67, 139, 255, 0.2);
 
-  --coral-red: #FF5555;
-  --coral-red-dark: #D93B3B;
-  --coral-red-light: #FFEBEB;
+  --dark-bg: var(--bg);
+  --light-bg: var(--navy-900);
+  --bg-subtle: var(--navy-800);
+  --card-white: var(--navy-900);
+  --card-border: var(--navy-700);
+  --text-dark: var(--white);
+  --text-secondary: var(--slate);
+  --text-muted: var(--slate);
 
-  --mint-green: #46D6A0;
-  --mint-green-dark: #2EB582;
-  --mint-green-light: #EDFAF5;
+  --primary-blue: var(--royal);
+  --primary-blue-dark: #1E4EB0;
+  --primary-blue-light: var(--electric);
+  --primary-blue-border: var(--electric);
 
-  --sky-blue: #55C7F2;
-  --sky-blue-dark: #2BAEDA;
-  --sky-blue-light: #EBF8FD;
+  --accent-orange: var(--gold);
+  --gold-yellow: var(--gold);
+  --coral-red: var(--pen-red);
+  --mint-green: var(--success);
 
-  /* Neutrals & Surfaces */
-  --dark-bg: #111827;
-  --light-bg: #F5F7FC;
-  --bg-subtle: #F0F3F9;
-  --card-white: #FFFFFF;
-  --card-border: #E2E8F0;
-  --text-dark: #111827;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
+  --mark-fill: rgba(40, 100, 217, 0.16);
+  --mark-ring: var(--royal);
 
-  /* Line Cutting Pen Colors */
-  --pen-red: #E63946;
-  --pen-red-dark: #BA181B;
+  /* Machined Tactile Pills (>= 52px) with 1px Press Feedback */
+  --btn-height: 52px;
+  --touch-target: 48px;
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 12px rgba(40, 100, 217, 0.4);
+  --shadow-btn-primary-active: inset 0 1px 0 rgba(0, 0, 0, 0.3), 0 1px 2px rgba(40, 100, 217, 0.3);
 
-  /* Tactile Arcade Gaming 3D Depth Shadows (Subway Surfers button feel) */
-  --shadow-btn-primary: 0 5px 0 #0D52B8, 0 8px 14px rgba(23, 105, 224, 0.35);
-  --shadow-btn-primary-active: 0 1px 0 #0D52B8, 0 2px 4px rgba(23, 105, 224, 0.35);
+  --shadow-btn-gold: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 14px rgba(243, 185, 79, 0.4);
+  --shadow-btn-gold-active: inset 0 1px 0 rgba(0, 0, 0, 0.25), 0 1px 2px rgba(243, 185, 79, 0.3);
 
-  --shadow-btn-gold: 0 5px 0 #D49D0C, 0 8px 14px rgba(255, 212, 71, 0.45);
-  --shadow-btn-gold-active: 0 1px 0 #D49D0C, 0 2px 4px rgba(255, 212, 71, 0.45);
+  --shadow-btn-mint: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 12px rgba(50, 184, 121, 0.35);
+  --shadow-btn-mint-active: inset 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 2px rgba(50, 184, 121, 0.35);
 
-  --shadow-btn-orange: 0 5px 0 #D66E11, 0 8px 14px rgba(255, 138, 36, 0.4);
-  --shadow-btn-orange-active: 0 1px 0 #D66E11, 0 2px 4px rgba(255, 138, 36, 0.4);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-card-elevated: 0 12px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
-  --shadow-btn-mint: 0 5px 0 #289F72, 0 8px 14px rgba(70, 214, 160, 0.35);
-  --shadow-btn-mint-active: 0 1px 0 #289F72, 0 2px 4px rgba(70, 214, 160, 0.35);
-
-  --shadow-btn-danger: 0 5px 0 #BA181B, 0 8px 14px rgba(255, 85, 85, 0.35);
-  --shadow-btn-danger-active: 0 1px 0 #BA181B, 0 2px 4px rgba(255, 85, 85, 0.35);
-
-  --shadow-btn-secondary: 0 4px 0 #CBD5E1, 0 6px 12px rgba(0, 0, 0, 0.05);
-  --shadow-btn-secondary-active: 0 1px 0 #CBD5E1, 0 2px 4px rgba(0, 0, 0, 0.05);
-
-  --shadow-card: 0 4px 12px rgba(18, 59, 120, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-card-elevated: 0 12px 28px rgba(18, 59, 120, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-tile: 0 5px 0 #CBD5E1, 0 6px 10px rgba(0, 0, 0, 0.06);
-  --shadow-tile-active: 0 1px 0 #CBD5E1, 0 2px 4px rgba(0, 0, 0, 0.06);
-
-  /* Radii */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
+  /* Radii (4pt grid: 8, 14, 24, pill) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-sheet: 24px;
   --radius-pill: 9999px;
 
-  /* Typography */
-  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  /* Typography Stacks: Barlow Condensed (Display), Figtree (Body), Kalam (Digits) */
+  --font-display: 'Barlow Condensed', 'Instrument Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Figtree', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-digits: 'Kalam', cursive;
+  --font-kalam: 'Kalam', cursive;
   --font-hand: 'Kalam', cursive;
 
   /* Safe Area Insets */

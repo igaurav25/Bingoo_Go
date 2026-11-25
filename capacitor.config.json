@@ -1,0 +1,31 @@
+{
+  "appId": "com.bingo.lastpage",
+  "appName": "Bingo",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#090e17",
+    "allowMixedContent": false,
+    "captureInput": true
+  },
+  "ios": {
+    "backgroundColor": "#090e17",
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#090e17",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#090e17"
+    }
+  }
+}

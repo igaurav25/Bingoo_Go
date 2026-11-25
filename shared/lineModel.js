@@ -93,6 +93,12 @@ export function validateGridArrangement(grid) {
   return { valid: true };
 }
 
+// Aliases for backward-compatibility with alternate naming
+export const validateBoardArrangement = validateGridArrangement;
+export const checkLineCompletion = (grid, marked, options) => {
+  return findCompletedLines(grid, marked, options);
+};
+
 /**
  * Generates a random valid 5x5 permutation of numbers 1-25 using Fisher-Yates shuffle.
  * @param {() => number} [rng=Math.random]
@@ -266,6 +272,42 @@ export function lineGeometry(lineId, s = 100) {
     };
   }
 
+  throw new Error(`Unknown line id: ${lineId}`);
+}
+
+/**
+ * Returns exact straight line coordinates for React SVG Overlay.
+ * Horizontal rows pass straight through row center: (20, yc) -> (span - 20, yc)
+ * Vertical columns pass straight through col center: (xc, 20) -> (xc, span - 20)
+ * 
+ * @param {string} lineId - 'r0'..'r4', 'c0'..'c4'
+ * @param {number} [s=100] - cell size (span = 5 * s = 500)
+ * @returns {{ id: string, x1: number, y1: number, x2: number, y2: number }}
+ */
+export function straightLineGeometry(lineId, s = 100) {
+  const span = GRID_SIZE * s; // 500
+  if (lineId.startsWith('r')) {
+    const r = parseInt(lineId.slice(1), 10);
+    const yc = (r + 0.5) * s;
+    return {
+      id: lineId,
+      x1: 20,
+      y1: yc,
+      x2: span - 20,
+      y2: yc
+    };
+  }
+  if (lineId.startsWith('c')) {
+    const c = parseInt(lineId.slice(1), 10);
+    const xc = (c + 0.5) * s;
+    return {
+      id: lineId,
+      x1: xc,
+      y1: 20,
+      x2: xc,
+      y2: span - 20
+    };
+  }
   throw new Error(`Unknown line id: ${lineId}`);
 }
 

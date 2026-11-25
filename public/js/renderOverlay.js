@@ -7,7 +7,7 @@
  * and instant hydration for reconnects/resumes.
  */
 
-import { lineGeometry, BINGO_LETTERS, calculateLetterStrokeGeometry } from '/shared/lineModel.js';
+import { lineGeometry, straightLineGeometry, BINGO_LETTERS, calculateLetterStrokeGeometry } from '/shared/lineModel.js';
 import { soundManager } from './audio.js';
 
 // SVG Namespace
@@ -133,7 +133,7 @@ export class RenderOverlay {
 
   _drawLineInstant(lineId) {
     this.renderedLineIds.add(lineId);
-    const geom = lineGeometry(lineId);
+    const geom = straightLineGeometry ? straightLineGeometry(lineId) : lineGeometry(lineId);
 
     const line = document.createElementNS(SVG_NS, 'line');
     line.setAttribute('x1', String(geom.x1));
@@ -143,8 +143,8 @@ export class RenderOverlay {
     line.setAttribute('pathLength', '1');
     line.setAttribute('stroke-dasharray', '1');
     line.setAttribute('stroke-dashoffset', '0');
-    line.setAttribute('stroke', 'var(--pen-red)');
-    line.setAttribute('stroke-width', '9');
+    line.setAttribute('stroke', '#10b981');
+    line.setAttribute('stroke-width', '11');
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('class', 'bingo-pen-stroke settled');
     line.dataset.lineId = lineId;
@@ -181,7 +181,7 @@ export class RenderOverlay {
     const duration = this.prefersReducedMotion ? 0 : (isAccelerated ? 220 : 450);
     const settleDuration = this.prefersReducedMotion ? 0 : (isAccelerated ? 60 : 120);
 
-    const geom = lineGeometry(lineInfo.id);
+    const geom = straightLineGeometry ? straightLineGeometry(lineInfo.id) : lineGeometry(lineInfo.id);
 
     // Create SVG Line
     const line = document.createElementNS(SVG_NS, 'line');
@@ -192,8 +192,8 @@ export class RenderOverlay {
     line.setAttribute('pathLength', '1');
     line.setAttribute('stroke-dasharray', '1');
     line.setAttribute('stroke-dashoffset', '1.02');
-    line.setAttribute('stroke', 'var(--pen-red)');
-    line.setAttribute('stroke-width', '9');
+    line.setAttribute('stroke', '#10b981');
+    line.setAttribute('stroke-width', '11');
     line.setAttribute('stroke-linecap', 'round');
     line.setAttribute('class', 'bingo-pen-stroke');
     line.dataset.lineId = lineInfo.id;

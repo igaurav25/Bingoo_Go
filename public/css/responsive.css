@@ -99,7 +99,11 @@
 /* 3. Tablets & Large Screens (width >= 600px) */
 @media (min-width: 600px) {
   .app-container {
-    max-width: 460px;
+    max-width: 720px;
+  }
+
+  .app-container.gameplay-active {
+    max-width: 520px;
   }
 
   .modes-grid {
@@ -110,7 +114,11 @@
 /* 4. Desktop / Laptop (width >= 1024px) */
 @media (min-width: 1024px) {
   .app-container {
-    max-width: 460px;
+    max-width: 1024px;
+  }
+
+  .app-container.gameplay-active {
+    max-width: 540px;
   }
 
   /* Enhanced desktop tactile hover */

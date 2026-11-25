@@ -1,7 +1,8 @@
 /**
  * server/friendsManager.js
- * 
- * Manages user friends directory, online status, and direct friend challenges.
+ *
+ * Manages real connected user presence and direct player challenges.
+ * Derives directory entries from connected sockets rather than fake mock friends.
  */
 
 export class FriendsManager {
@@ -11,26 +12,37 @@ export class FriendsManager {
     /** @type {Map<string, { id: string, fromId: string, fromName: string, fromAvatar: string, toId: string, createdAt: number, status: 'pending' | 'accepted' | 'rejected' | 'expired' }>} */
     this.challenges = new Map();
 
-    // Default mock friends directory for demo and sparring
+    // Practice/sparring directory entries (flagged isBot: true)
     this.defaultFriends = [
-      { id: 'f-alex', name: 'Alex_Pro', avatar: '⚡', status: 'online', rank: 'Diamond I' },
-      { id: 'f-rohit', name: 'Rohit', avatar: '🦊', status: 'online', rank: 'Platinum II' },
-      { id: 'f-zara', name: 'Zara_Queen', avatar: '🐼', status: 'in_game', rank: 'Gold III' },
-      { id: 'f-shadow', name: 'ShadowNinja', avatar: '🐱', status: 'offline', rank: 'Diamond III' },
-      { id: 'f-priya', name: 'Priya_Star', avatar: '🐰', status: 'online', rank: 'Gold I' }
+      { id: 'f-alex', name: 'Alex_Pro', avatar: '⚡', status: 'online', rank: 'Diamond I', isBot: true },
+      { id: 'f-rohit', name: 'Rohit', avatar: '🦊', status: 'online', rank: 'Platinum II', isBot: true },
+      { id: 'f-zara', name: 'Zara_Queen', avatar: '🐼', status: 'in_game', rank: 'Gold III', isBot: true },
+      { id: 'f-shadow', name: 'ShadowNinja', avatar: '🐱', status: 'offline', rank: 'Diamond III', isBot: true },
+      { id: 'f-priya', name: 'Priya_Star', avatar: '🐰', status: 'online', rank: 'Gold I', isBot: true }
     ];
   }
 
   registerUser(playerId, name, avatar, ws) {
-    this.users.set(playerId, { id: playerId, name, avatar, status: 'online', ws });
+    if (!playerId) return;
+    this.users.set(playerId, {
+      id: playerId,
+      name: name || 'Player',
+      avatar: avatar || '🦊',
+      status: 'online',
+      ws
+    });
   }
 
-  unregisterUser(playerId) {
+  unregisterUser(playerId, ws = null) {
     const user = this.users.get(playerId);
-    if (user) {
+    if (user && (!ws || user.ws === ws)) {
       user.status = 'offline';
       user.ws = null;
     }
+  }
+
+  getUser(playerId) {
+    return this.users.get(playerId) || null;
   }
 
   setUserStatus(playerId, status) {
@@ -40,17 +52,17 @@ export class FriendsManager {
     }
   }
 
-  getFriendsList(playerId) {
-    // Return registered active users + default friends
-    const list = [...this.defaultFriends];
+  getFriendsList(playerId, includeDefaults = true) {
+    const list = includeDefaults ? [...this.defaultFriends] : [];
     for (const [id, user] of this.users.entries()) {
-      if (id !== playerId && !list.some(f => f.id === id)) {
+      if (id !== playerId && !id.startsWith('bot-') && !list.some(f => f.id === id)) {
         list.unshift({
           id: user.id,
           name: user.name,
           avatar: user.avatar,
-          status: user.status,
-          rank: 'Gold II'
+          status: user.status || 'offline',
+          isOnline: Boolean(user.ws && user.status !== 'offline'),
+          isBot: false
         });
       }
     }

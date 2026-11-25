@@ -226,6 +226,22 @@ export class Match {
   }
 
   /**
+   * Advances turn without calling a number when SKIP_TURN timeout rule is active.
+   */
+  skipTurn(playerId) {
+    if (this.status !== 'IN_PROGRESS' || this.currentTurnPlayerId !== playerId) {
+      return { success: false };
+    }
+    const prev = this.currentTurnPlayerId;
+    this.currentTurnPlayerId = this.getOpponentId(playerId);
+    return {
+      success: true,
+      skippedPlayerId: prev,
+      nextTurnPlayerId: this.currentTurnPlayerId
+    };
+  }
+
+  /**
    * Processes a BINGO claim from a player.
    * Server validates >= 5 lines, in-progress match, and is idempotent.
    * 
